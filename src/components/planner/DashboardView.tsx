@@ -29,7 +29,7 @@ function Panel({ title, children, className }: { title: string; children: React.
 const tip = { contentStyle: { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 } };
 const pct = (ts: Task[]) => (ts.length ? Math.round((ts.filter((t) => t.status === "Aprovado").length / ts.length) * 100) : 0);
 
-function RateRow({ label, sub, ts }: { label: string; sub?: string; ts: Task[] }) {
+function RateRow({ label, sub, ts }: { label: string; sub?: string | undefined; ts: Task[] }) {
   const p = pct(ts);
   return (
     <tr className="border-b border-border last:border-0">
@@ -41,7 +41,7 @@ function RateRow({ label, sub, ts }: { label: string; sub?: string; ts: Task[] }
   );
 }
 
-function RateTable({ rows }: { rows: { key: string; label: string; sub?: string; ts: Task[] }[] }) {
+function RateTable({ rows }: { rows: { key: string; label: string; sub?: string | undefined; ts: Task[] }[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
