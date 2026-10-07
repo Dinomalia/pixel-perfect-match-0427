@@ -47,3 +47,7 @@ export function GedeLink({ url }: { url: string }) {
     </a>
   );
 }
+
+export function DocTypeBadge({ type }: { type: string }) {
+  return <span className="inline-flex items-center rounded bg-navy px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-navy-foreground">[{type || "—"}]</span>;
+}
