@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { PEOPLE, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
+import { PEOPLE, docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
 import { KanbanView } from "@/components/planner/KanbanView";
 import { DashboardView } from "@/components/planner/DashboardView";
 import { TableView } from "@/components/planner/TableView";
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 type View = "kanban" | "dashboard" | "table";
 
 function App() {
-  const { filters, setFilters, projects } = useTasks();
+  const { filters, setFilters, projects, companies, docTypes } = useTasks();
   const [view, setView] = useState<View>("kanban");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -56,7 +56,7 @@ function App() {
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => openNew()} className="ml-auto bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Nova Tarefa</Button>
+          <Button onClick={() => openNew()} className="ml-auto bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
         </div>
       </header>
       <div className="border-b border-border bg-card">
