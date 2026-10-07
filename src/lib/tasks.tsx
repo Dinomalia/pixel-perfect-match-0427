@@ -28,6 +28,18 @@ export type Task = {
   status: Status;
   priority: Priority;
   notes: string;
+  revision?: string;
+  history?: RevisionSnapshot[];
+};
+export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string };
+export type NewRevisionInput = { rev: string; status: Status; gedeUrl: string; note: string; dueDate: string };
+
+export const revOf = (t: Task) => t.revision || "0";
+export const nextRev = (r: string) => {
+  const v = r.trim().toUpperCase();
+  if (/^\d+$/.test(v)) return String(Number(v) + 1);
+  if (/^[A-Z]$/.test(v)) return v === "Z" ? "0" : String.fromCharCode(v.charCodeAt(0) + 1);
+  return v + "1";
 };
 
 export const STATUS_STYLE: Record<Status, { badge: string; dot: string; chart: string; border: string }> = {
@@ -70,7 +82,7 @@ const t = (id: string, docType: string, title: string, projectCode: string, assi
   gedeUrl: `https://gede.empresa.com/docs/${projectCode}/${id}`,
 });
 
-const SEED_TASKS: Task[] = [
+const SEED_TASKS_BASE: Task[] = [
   t("t1", "MD", "Memorial descritivo de instrumentação", "PRJ-1420", ["p1"], "2026-10-15", "Elaboração", "Alta", "Revisar premissas do cliente."),
   t("t2", "DE", "Fluxograma de engenharia (P&ID)", "PRJ-1420", ["p2", "p1"], "2026-10-20", "Qualidade", "Crítica"),
   t("t3", "FD", "Folha de dados do compressor K-101", "PRJ-1420", ["p3"], "2026-10-10", "Aprovado", "Média"),
@@ -87,6 +99,17 @@ const SEED_TASKS: Task[] = [
   t("t14", "DE", "Diagrama unifilar", "PRJ-1502", ["p4"], "2026-10-19", "Qualidade", "Média"),
 ];
 
+const SEED_TASKS: Task[] = SEED_TASKS_BASE.map((x) => {
+  if (x.id === "t2") return { ...x, revision: "B", history: [
+    { rev: "0", status: "Aprovado", assignees: ["p2"], gedeUrl: `${x.gedeUrl}/rev0`, dueDate: "2026-08-10", note: "Emissão inicial.", archivedAt: "2026-08-12" },
+    { rev: "A", status: "Retrabalho", assignees: ["p2", "p1"], gedeUrl: `${x.gedeUrl}/revA`, dueDate: "2026-09-15", note: "Inclusão de novas linhas de utilidades.", archivedAt: "2026-09-20" },
+  ] };
+  if (x.id === "t4") return { ...x, revision: "1", history: [
+    { rev: "0", status: "Em Aprovação", assignees: ["p4"], gedeUrl: `${x.gedeUrl}/rev0`, dueDate: "2026-09-01", note: "Emissão para comentários.", archivedAt: "2026-09-05" },
+  ] };
+  return x;
+});
+
 type Filters = { search: string; company: string; project: string; person: string; docType: string };
 
 type Ctx = {
@@ -100,6 +123,7 @@ type Ctx = {
   upsertTask: (task: Task) => void;
   deleteTask: (id: string) => void;
   moveTask: (id: string, status: Status) => void;
+  newRevision: (id: string, input: NewRevisionInput) => void;
   addProject: (p: Project) => void;
   addCompany: (name: string) => string;
   companyOf: (projectCode: string) => Company | undefined;
@@ -163,6 +187,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     upsertTask: (task) => setTasks((ts) => (ts.some((x) => x.id === task.id) ? ts.map((x) => (x.id === task.id ? task : x)) : [...ts, task])),
     deleteTask: (id) => setTasks((ts) => ts.filter((x) => x.id !== id)),
     moveTask: (id, status) => setTasks((ts) => ts.map((x) => (x.id === id ? { ...x, status } : x))),
+    newRevision: (id, i) => setTasks((ts) => ts.map((x) => {
+      if (x.id !== id) return x;
+      const snap: RevisionSnapshot = { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: new Date().toISOString().slice(0, 10) };
+      return { ...x, revision: i.rev, status: i.status, gedeUrl: i.gedeUrl, dueDate: i.dueDate, notes: i.note, history: [...(x.history ?? []), snap] };
+    })),
     addProject: (p) => setProjects((ps) => (ps.some((x) => x.code === p.code) ? ps : [...ps, p])),
     addCompany: (name) => {
       const existing = companies.find((c) => c.name.toLowerCase() === name.toLowerCase());
