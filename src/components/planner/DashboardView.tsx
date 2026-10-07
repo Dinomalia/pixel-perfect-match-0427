@@ -79,10 +79,10 @@ export function DashboardView() {
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <Kpi label="Projetos ativos" value={activeProjects} icon={FolderKanban} />
-        <Kpi label="Total de documentos" value={filtered.length} icon={ListTodo} />
-        <Kpi label="Em retrabalho" value={count("Retrabalho")} icon={AlertTriangle} tone="rework" />
+        <Kpi label="Documentos no ciclo" value={filtered.length} icon={ListTodo} />
+        <Kpi label="Taxa de retrabalho" value={`${filtered.length ? Math.round((count("Retrabalho") / filtered.length) * 100) : 0}%`} icon={AlertTriangle} tone="rework" />
         <Kpi label="Em aprovação (cliente/DCC)" value={count("Em Aprovação")} icon={Clock} tone="pending" />
-        <Kpi label="Taxa de aprovação" value={`${pct(filtered)}%`} icon={CheckCircle2} />
+        <Kpi label="Taxa de aprovação final" value={`${pct(filtered)}%`} icon={CheckCircle2} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Distribuição por status">

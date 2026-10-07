@@ -10,13 +10,13 @@ export const DEFAULT_DOC_TYPES: { code: string; label: string }[] = [
   { code: "MD", label: "Memorial Descritivo" },
   { code: "ET", label: "Especificação Técnica" },
   { code: "MC", label: "Memória de Cálculo" },
-  { code: "DE", label: "Diagrama / Desenho" },
+  { code: "DE", label: "Desenho de Engenharia" },
   { code: "LD", label: "Lista de Documentos" },
 ];
 
 export type Company = { id: string; name: string };
 export type Project = { code: string; name: string; companyId: string };
-export type Person = { id: string; name: string; email: string };
+export type Person = { id: string; name: string; email: string; role: string };
 export type Task = {
   id: string;
   title: string;
@@ -46,11 +46,11 @@ export const PRIORITY_STYLE: Record<Priority, string> = {
 };
 
 export const PEOPLE: Person[] = [
-  { id: "p1", name: "Ana Souza", email: "ana.souza@empresa.com" },
-  { id: "p2", name: "Bruno Lima", email: "bruno.lima@empresa.com" },
-  { id: "p3", name: "Carla Mendes", email: "carla.mendes@empresa.com" },
-  { id: "p4", name: "Diego Rocha", email: "diego.rocha@empresa.com" },
-  { id: "p5", name: "Elisa Martins", email: "elisa.martins@empresa.com" },
+  { id: "p1", name: "Ana Souza", role: "Engenheira de Processos", email: "ana.souza@empresa.com" },
+  { id: "p2", name: "Bruno Lima", role: "Engenheiro Mecânico", email: "bruno.lima@empresa.com" },
+  { id: "p3", name: "Carla Mendes", role: "Projetista Sênior", email: "carla.mendes@empresa.com" },
+  { id: "p4", name: "Diego Rocha", role: "Engenheiro de Instrumentação", email: "diego.rocha@empresa.com" },
+  { id: "p5", name: "Elisa Martins", role: "Coordenadora de Projetos", email: "elisa.martins@empresa.com" },
 ];
 
 const SEED_COMPANIES: Company[] = [
@@ -185,3 +185,10 @@ export const personById = (id: string) => PEOPLE.find((p) => p.id === id);
 export const initials = (name: string) => name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 export const fmtDate = (d: string) => (d ? d.split("-").reverse().join("/") : "—");
 export const docLabel = (code: string) => DEFAULT_DOC_TYPES.find((d) => d.code === code)?.label ?? "Tipo customizado";
+
+export const daysUntil = (d: string) => {
+  if (!d) return Infinity;
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((new Date(d + "T00:00:00").getTime() - t.getTime()) / 86400000);
+};
+export const isOverdue = (t: { dueDate: string; status: Status }) => t.status !== "Aprovado" && daysUntil(t.dueDate) < 0;
