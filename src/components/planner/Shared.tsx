@@ -1,8 +1,9 @@
-import { ExternalLink } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, ExternalLink } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PRIORITY_STYLE, STATUS_STYLE, initials, personById, type Priority, type Status } from "@/lib/tasks";
+import { PRIORITY_STYLE, STATUSES, STATUS_STYLE, daysUntil, fmtDate, initials, personById, useTasks, type Priority, type Status, type Task } from "@/lib/tasks";
 
 export function StatusBadge({ status }: { status: Status }) {
   return (
@@ -30,7 +31,7 @@ export function Avatars({ ids, size = "sm" }: { ids: string[]; size?: "sm" | "md
                 {initials(p.name)}
               </span>
             </TooltipTrigger>
-            <TooltipContent><p className="font-medium">{p.name}</p><p className="text-xs opacity-80">{p.email}</p></TooltipContent>
+            <TooltipContent><p className="font-medium">{p.name}</p><p className="text-xs opacity-80">{p.role}</p><p className="text-xs opacity-60">{p.email}</p></TooltipContent>
           </Tooltip>
         );
       })}
@@ -50,4 +51,36 @@ export function GedeLink({ url }: { url: string }) {
 
 export function DocTypeBadge({ type }: { type: string }) {
   return <span className="inline-flex items-center rounded bg-navy px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-navy-foreground">[{type || "—"}]</span>;
+}
+
+export function StatusSelect({ task }: { task: Task }) {
+  const { moveTask } = useTasks();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <button type="button" className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition hover:opacity-80", STATUS_STYLE[task.status].badge)}>
+          <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_STYLE[task.status].dot)} />{task.status}<ChevronDown className="h-3 w-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+        {STATUSES.map((s) => (
+          <DropdownMenuItem key={s} onSelect={() => moveTask(task.id, s)} className="gap-2">
+            <span className={cn("h-2 w-2 rounded-full", STATUS_STYLE[s].dot)} />{s}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function DueDate({ task }: { task: Task }) {
+  const d = daysUntil(task.dueDate);
+  const late = task.status !== "Aprovado" && d < 0;
+  const soon = task.status !== "Aprovado" && d >= 0 && d <= 7;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-xs", late ? "font-semibold text-destructive" : soon ? "font-medium text-status-draft-foreground" : "text-muted-foreground")}
+      title={late ? `Atrasado ${-d} dia(s)` : soon ? `Vence em ${d} dia(s)` : undefined}>
+      {late ? <AlertTriangle className="h-3 w-3" /> : <CalendarDays className="h-3 w-3" />}{fmtDate(task.dueDate)}
+    </span>
+  );
 }
