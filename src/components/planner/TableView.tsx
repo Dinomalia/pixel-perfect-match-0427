@@ -3,13 +3,13 @@ import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STATUSES, fmtDate, personById, useTasks, type Task } from "@/lib/tasks";
-import { Avatars, GedeLink, PriorityBadge, StatusBadge } from "./Shared";
+import { Avatars, DocTypeBadge, GedeLink, PriorityBadge, StatusBadge } from "./Shared";
 
 type Key = "projectCode" | "project" | "person" | "dueDate" | "status" | "title";
 const PAGE = 8;
 
 export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
-  const { filtered, projects } = useTasks();
+  const { filtered, projects, companyOf } = useTasks();
   const [status, setStatus] = useState("all");
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: "dueDate", dir: 1 });
   const [page, setPage] = useState(0);
@@ -48,17 +48,17 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Todos</SelectItem>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
-        <span className="ml-auto text-sm text-muted-foreground">{rows.length} tarefas</span>
+        <span className="ml-auto text-sm text-muted-foreground">{rows.length} documentos</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
-            <tr><H k="projectCode">Código</H><H k="project">Projeto</H><H k="title">Tarefa</H><H k="person">Responsável</H><H k="dueDate">Prazo</H><H k="status">Status</H><th className="px-4 py-3 uppercase">Prioridade</th><th className="px-4 py-3 uppercase">GEDE</th></tr>
+            <tr><th className="px-4 py-3 uppercase">Tipo</th><th className="px-4 py-3 uppercase">Empresa</th><H k="projectCode">Código</H><H k="project">Projeto</H><H k="title">Documento</H><H k="person">Responsável</H><H k="dueDate">Prazo</H><H k="status">Status</H><th className="px-4 py-3 uppercase">Prioridade</th><th className="px-4 py-3 uppercase">GEDE</th></tr>
           </thead>
           <tbody>
             {slice.map((t) => (
               <tr key={t.id} onClick={() => onEdit(t)} className="cursor-pointer border-t border-border hover:bg-accent/50">
-                <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{t.projectCode}</td>
+                <td className="px-4 py-3"><DocTypeBadge type={t.docType} /></td><td className="px-4 py-3">{companyOf(t.projectCode)?.name}</td><td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{t.projectCode}</td>
                 <td className="px-4 py-3">{projects.find((p) => p.code === t.projectCode)?.name}</td>
                 <td className="px-4 py-3 font-medium">{t.title}</td>
                 <td className="px-4 py-3"><div className="flex items-center gap-2"><Avatars ids={t.assignees} /><span className="truncate text-xs text-muted-foreground">{personById(t.assignees[0] ?? "")?.name}</span></div></td>
@@ -68,7 +68,7 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
                 <td className="px-4 py-3"><GedeLink url={t.gedeUrl} /></td>
               </tr>
             ))}
-            {slice.length === 0 && <tr><td colSpan={8} className="py-10 text-center text-muted-foreground">Nenhuma tarefa encontrada</td></tr>}
+            {slice.length === 0 && <tr><td colSpan={10} className="py-10 text-center text-muted-foreground">Nenhum documento encontrada</td></tr>}
           </tbody>
         </table>
       </div>

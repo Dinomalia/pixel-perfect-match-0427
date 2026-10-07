@@ -71,6 +71,7 @@
   --color-status-quality: var(--status-quality);
   --color-status-rework: var(--status-rework);
   --color-status-approved: var(--status-approved);
+  --color-status-pending: var(--status-pending);
   --shadow-card: 0 1px 2px oklch(0.25 0.05 255 / 0.06), 0 1px 3px oklch(0.25 0.05 255 / 0.05);
   --shadow-card-hover: 0 6px 16px -4px oklch(0.25 0.05 255 / 0.18);
 }
@@ -84,6 +85,7 @@
   --status-quality: oklch(0.56 0.17 252);
   --status-rework: oklch(0.63 0.2 38);
   --status-approved: oklch(0.6 0.15 152);
+  --status-pending: oklch(0.55 0.11 200);
   --background: oklch(0.965 0.005 250);
   --foreground: oklch(0.22 0.04 258);
   --card: oklch(1 0 0);

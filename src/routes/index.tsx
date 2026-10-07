@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { PEOPLE, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
+import { PEOPLE, docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
 import { KanbanView } from "@/components/planner/KanbanView";
 import { DashboardView } from "@/components/planner/DashboardView";
 import { TableView } from "@/components/planner/TableView";
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
 type View = "kanban" | "dashboard" | "table";
 
 function App() {
-  const { filters, setFilters, projects } = useTasks();
+  const { filters, setFilters, projects, companies, docTypes } = useTasks();
   const [view, setView] = useState<View>("kanban");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -56,23 +56,35 @@ function App() {
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => openNew()} className="ml-auto bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Nova Tarefa</Button>
+          <Button onClick={() => openNew()} className="ml-auto bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
         </div>
       </header>
       <div className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar tarefas, projetos, colaboradores..." value={filters.search} onChange={(e) => setFilters({ search: e.target.value })} maxLength={100} />
-          </div>
-          <Select value={filters.project} onValueChange={(v) => setFilters({ project: v })}>
-            <SelectTrigger className="w-full sm:w-60"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Todos os projetos</SelectItem>{projects.map((p) => <SelectItem key={p.code} value={p.code}>{p.code} · {p.name}</SelectItem>)}</SelectContent>
-          </Select>
+          <nav aria-label="Escopo" className="flex flex-wrap items-center gap-1.5">
+            <Select value={filters.company} onValueChange={(v) => setFilters({ company: v, project: "all" })}>
+              <SelectTrigger className="w-44 font-semibold"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todas as empresas</SelectItem>{companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <Select value={filters.project} onValueChange={(v) => setFilters({ project: v })}>
+              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os projetos</SelectItem>{projects.filter((p) => filters.company === "all" || p.companyId === filters.company).map((p) => <SelectItem key={p.code} value={p.code}>{p.code} · {p.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <Select value={filters.docType} onValueChange={(v) => setFilters({ docType: v })}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os tipos</SelectItem>{docTypes.map((d) => <SelectItem key={d} value={d}>{d} — {docLabel(d)}</SelectItem>)}</SelectContent>
+            </Select>
+          </nav>
           <Select value={filters.person} onValueChange={(v) => setFilters({ person: v })}>
             <SelectTrigger className="w-full sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">Todos os colaboradores</SelectItem>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" placeholder="Buscar documentos..." value={filters.search} onChange={(e) => setFilters({ search: e.target.value })} maxLength={100} />
+          </div>
         </div>
       </div>
       <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
