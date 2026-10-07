@@ -19,7 +19,7 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
     const val = (t: Task): string => {
       switch (sort.key) {
         case "project": return pname(t.projectCode);
-        case "person": return personById(t.assignees[0])?.name ?? "";
+        case "person": return personById(t.assignees[0] ?? "")?.name ?? "";
         case "status": return String(STATUSES.indexOf(t.status));
         default: return t[sort.key];
       }
@@ -61,7 +61,7 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
                 <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{t.projectCode}</td>
                 <td className="px-4 py-3">{projects.find((p) => p.code === t.projectCode)?.name}</td>
                 <td className="px-4 py-3 font-medium">{t.title}</td>
-                <td className="px-4 py-3"><div className="flex items-center gap-2"><Avatars ids={t.assignees} /><span className="truncate text-xs text-muted-foreground">{personById(t.assignees[0])?.name}</span></div></td>
+                <td className="px-4 py-3"><div className="flex items-center gap-2"><Avatars ids={t.assignees} /><span className="truncate text-xs text-muted-foreground">{personById(t.assignees[0] ?? "")?.name}</span></div></td>
                 <td className="whitespace-nowrap px-4 py-3">{fmtDate(t.dueDate)}</td>
                 <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                 <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>

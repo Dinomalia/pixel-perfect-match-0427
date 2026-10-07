@@ -41,7 +41,7 @@ export function DashboardView() {
     const row: Record<string, string | number> = { name: p.code, fullName: p.name, total: ts.length };
     STATUSES.forEach((s) => (row[s] = ts.filter((t) => t.status === s).length));
     return row;
-  }).filter((r) => (r.total as number) > 0);
+  }).filter((r) => (r["total"] as number) > 0);
 
   return (
     <div className="space-y-4">
@@ -97,13 +97,13 @@ export function DashboardView() {
             </thead>
             <tbody>
               {byProject.map((r) => {
-                const pct = Math.round(((r["Aprovado"] as number) / (r.total as number)) * 100);
+                const pct = Math.round(((r["Aprovado"] as number) / (r["total"] as number)) * 100);
                 return (
-                  <tr key={r.name} className="border-b border-border last:border-0">
-                    <td className="py-3 pr-4 font-mono text-xs font-semibold text-primary">{r.name}</td>
-                    <td className="py-3 pr-4 font-medium">{r.fullName}</td>
+                  <tr key={r["name"]} className="border-b border-border last:border-0">
+                    <td className="py-3 pr-4 font-mono text-xs font-semibold text-primary">{r["name"]}</td>
+                    <td className="py-3 pr-4 font-medium">{r["fullName"]}</td>
                     {STATUSES.map((s) => <td key={s} className="py-3 pr-4 text-center">{r[s]}</td>)}
-                    <td className="py-3 pr-4 text-center font-semibold">{r.total}</td>
+                    <td className="py-3 pr-4 text-center font-semibold">{r["total"]}</td>
                     <td className="py-3"><div className="flex items-center gap-2"><Progress value={pct} className="h-2" /><span className="w-10 text-right text-xs font-semibold">{pct}%</span></div></td>
                   </tr>
                 );

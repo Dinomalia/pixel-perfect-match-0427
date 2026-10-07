@@ -39,11 +39,11 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
     let code = form.projectCode;
     if (code === NEW) {
       const c = newCode.trim().toUpperCase(); const n = newName.trim();
-      if (!c || !n || c.length > 30 || n.length > 100) return toast.error("Informe código e nome do novo projeto");
+      if (!c || !n || c.length > 30 || n.length > 100) { toast.error("Informe código e nome do novo projeto"); return; }
       addProject({ code: c, name: n }); code = c;
     }
     const r = schema.safeParse({ ...form, projectCode: code });
-    if (!r.success) return toast.error(r.error.issues[0].message);
+    if (!r.success) { toast.error(r.error.issues[0]?.message ?? "Dados inválidos"); return; }
     upsertTask({ ...form, ...r.data, projectCode: code, id: form.id || `t${Date.now()}` });
     toast.success(form.id ? "Tarefa atualizada" : "Tarefa criada");
     onOpenChange(false);
