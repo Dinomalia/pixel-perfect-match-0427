@@ -8,11 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PEOPLE, PRIORITIES, STATUSES, initials, useTasks, type Status, type Task } from "@/lib/tasks";
+import { PEOPLE, PRIORITIES, STATUSES, docLabel, initials, useTasks, type Status, type Task } from "@/lib/tasks";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Informe o título").max(150),
-  projectCode: z.string().trim().min(1, "Selecione um projeto"),
+  docType: z.string().trim().min(1, "Selecione o tipo de documento").max(10, "Tipo com até 10 caracteres"),
   gedeUrl: z.string().trim().url("Link GEDE inválido").max(500).or(z.literal("")),
   assignees: z.array(z.string()).min(1, "Selecione ao menos um responsável"),
   dueDate: z.string().min(1, "Informe o prazo"),
@@ -22,56 +22,104 @@ const schema = z.object({
 const NEW = "__new__";
 
 export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: boolean; onOpenChange: (o: boolean) => void; task?: Task | null; defaultStatus?: Status }) {
-  const { projects, upsertTask, addProject, deleteTask } = useTasks();
-  const blank = (): Task => ({ id: "", title: "", projectCode: projects[0]?.code ?? "", gedeUrl: "", assignees: [], dueDate: "", status: defaultStatus ?? "Elaboração", priority: "Média", notes: "" });
+  const { projects, companies, docTypes, upsertTask, addProject, addCompany, deleteTask, companyOf, filters } = useTasks();
+  const blank = (): Task => ({ id: "", title: "", projectCode: "", docType: "", gedeUrl: "", assignees: [], dueDate: "", status: defaultStatus ?? "Elaboração", priority: "Média", notes: "" });
   const [form, setForm] = useState<Task>(blank);
+  const [companyId, setCompanyId] = useState("");
+  const [newCompany, setNewCompany] = useState("");
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
+  const [customType, setCustomType] = useState("");
 
   useEffect(() => {
-    if (open) { setForm(task ?? blank()); setNewCode(""); setNewName(""); }
+    if (!open) return;
+    const f = task ?? blank();
+    const cid = task ? companyOf(task.projectCode)?.id ?? "" : filters.company !== "all" ? filters.company : companies[0]?.id ?? "";
+    if (!task) {
+      const proj = filters.project !== "all" ? filters.project : projects.find((p) => p.companyId === cid)?.code ?? "";
+      f.projectCode = proj;
+    }
+    setForm(f); setCompanyId(cid); setNewCompany(""); setNewCode(""); setNewName(""); setCustomType("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task, defaultStatus]);
 
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const companyProjects = projects.filter((p) => p.companyId === companyId);
 
   const save = () => {
+    let cid = companyId;
+    if (cid === NEW) {
+      const n = newCompany.trim();
+      if (!n || n.length > 80) { toast.error("Informe o nome da nova empresa"); return; }
+      cid = addCompany(n);
+    }
+    if (!cid) { toast.error("Selecione a empresa"); return; }
     let code = form.projectCode;
-    if (code === NEW) {
+    if (code === NEW || cid !== companyId) {
       const c = newCode.trim().toUpperCase(); const n = newName.trim();
       if (!c || !n || c.length > 30 || n.length > 100) { toast.error("Informe código e nome do novo projeto"); return; }
-      addProject({ code: c, name: n }); code = c;
+      addProject({ code: c, name: n, companyId: cid }); code = c;
     }
-    const r = schema.safeParse({ ...form, projectCode: code });
+    if (!code) { toast.error("Selecione o projeto"); return; }
+    const docType = form.docType === NEW ? customType.trim().toUpperCase() : form.docType;
+    const r = schema.safeParse({ ...form, docType });
     if (!r.success) { toast.error(r.error.issues[0]?.message ?? "Dados inválidos"); return; }
     upsertTask({ ...form, ...r.data, projectCode: code, id: form.id || `t${Date.now()}` });
-    toast.success(form.id ? "Tarefa atualizada" : "Tarefa criada");
+    toast.success(form.id ? "Documento atualizado" : "Documento criado");
     onOpenChange(false);
   };
+
+  const showNewProject = form.projectCode === NEW || companyId === NEW;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader><DialogTitle>{form.id ? "Editar tarefa" : "Nova tarefa"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{form.id ? "Editar documento" : "Novo documento"}</DialogTitle></DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2 space-y-1.5"><Label>Título</Label><Input value={form.title} onChange={(e) => set("title", e.target.value)} maxLength={150} /></div>
           <div className="space-y-1.5">
-            <Label>Projeto</Label>
-            <Select value={form.projectCode} onValueChange={(v) => set("projectCode", v)}>
+            <Label>1. Empresa / Cliente</Label>
+            <Select value={companyId} onValueChange={(v) => { setCompanyId(v); set("projectCode", projects.find((p) => p.companyId === v)?.code ?? (v === NEW ? NEW : "")); }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                {projects.map((p) => <SelectItem key={p.code} value={p.code}>{p.code} · {p.name}</SelectItem>)}
-                <SelectItem value={NEW}>+ Criar novo projeto</SelectItem>
+                {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                <SelectItem value={NEW}>+ Nova empresa</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} /></div>
-          {form.projectCode === NEW && (
+          <div className="space-y-1.5">
+            <Label>2. Projeto</Label>
+            <Select value={companyId === NEW ? NEW : form.projectCode} onValueChange={(v) => set("projectCode", v)} disabled={companyId === NEW}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {companyProjects.map((p) => <SelectItem key={p.code} value={p.code}>{p.code} · {p.name}</SelectItem>)}
+                <SelectItem value={NEW}>+ Novo projeto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {companyId === NEW && <div className="sm:col-span-2 space-y-1.5"><Label>Nome da nova empresa</Label><Input value={newCompany} onChange={(e) => setNewCompany(e.target.value)} maxLength={80} /></div>}
+          {showNewProject && (
             <>
-              <div className="space-y-1.5"><Label>Código do projeto</Label><Input placeholder="PRJ-2026-04" value={newCode} onChange={(e) => setNewCode(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Nome do projeto</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label>Código do projeto</Label><Input placeholder="PRJ-1600" value={newCode} onChange={(e) => setNewCode(e.target.value)} maxLength={30} /></div>
+              <div className="space-y-1.5"><Label>Nome do projeto</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={100} /></div>
             </>
           )}
+          <div className="space-y-1.5">
+            <Label>3. Tipo de documento</Label>
+            <Select value={form.docType} onValueChange={(v) => set("docType", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {docTypes.map((d) => <SelectItem key={d} value={d}>{d} — {docLabel(d)}</SelectItem>)}
+                <SelectItem value={NEW}>+ Tipo customizado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {form.docType === NEW ? (
+            <div className="space-y-1.5"><Label>Sigla do novo tipo</Label><Input placeholder="ex.: RT" value={customType} onChange={(e) => setCustomType(e.target.value)} maxLength={10} /></div>
+          ) : (
+            <div className="space-y-1.5"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} /></div>
+          )}
+          <div className="sm:col-span-2 space-y-1.5"><Label>Título do documento</Label><Input value={form.title} onChange={(e) => set("title", e.target.value)} maxLength={150} /></div>
+          {form.docType === NEW && <div className="space-y-1.5"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} /></div>}
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select value={form.status} onValueChange={(v) => set("status", v as Status)}>
@@ -88,7 +136,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
           </div>
           <div className="sm:col-span-2 space-y-1.5"><Label>Link GED/GEDE</Label><Input type="url" placeholder="https://..." value={form.gedeUrl} onChange={(e) => set("gedeUrl", e.target.value)} /></div>
           <div className="sm:col-span-2 space-y-1.5">
-            <Label>Responsáveis</Label>
+            <Label>Colaboradores</Label>
             <div className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-2">
               {PEOPLE.map((p) => (
                 <label key={p.id} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -99,10 +147,10 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
               ))}
             </div>
           </div>
-          <div className="sm:col-span-2 space-y-1.5"><Label>Observações</Label><Textarea rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} maxLength={2000} /></div>
+          <div className="sm:col-span-2 space-y-1.5"><Label>Descrição / Observações</Label><Textarea rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} maxLength={2000} /></div>
         </div>
         <DialogFooter className="gap-2">
-          {form.id && <Button variant="outline" className="mr-auto text-destructive" onClick={() => { deleteTask(form.id); onOpenChange(false); toast.success("Tarefa excluída"); }}>Excluir</Button>}
+          {form.id && <Button variant="outline" className="mr-auto text-destructive" onClick={() => { deleteTask(form.id); onOpenChange(false); toast.success("Documento excluído"); }}>Excluir</Button>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={save}>Salvar</Button>
         </DialogFooter>
