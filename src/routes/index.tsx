@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, Home, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { PEOPLE, docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
-import { KanbanView } from "@/components/planner/KanbanView";
+import { KanbanView, type GroupBy } from "@/components/planner/KanbanView";
+import { HomeView } from "@/components/planner/HomeView";
 import { DashboardView } from "@/components/planner/DashboardView";
 import { TableView } from "@/components/planner/TableView";
 import { TaskDialog } from "@/components/planner/TaskDialog";
@@ -29,11 +30,13 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-type View = "kanban" | "dashboard" | "table";
+type View = "home" | "kanban" | "dashboard" | "table";
 
 function App() {
   const { filters, setFilters, projects, companies, docTypes } = useTasks();
-  const [view, setView] = useState<View>("kanban");
+  const [view, setView] = useState<View>("home");
+  const [me, setMe] = useState("p1");
+  const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defStatus, setDefStatus] = useState<Status>("Elaboração");
@@ -51,15 +54,20 @@ function App() {
           </div>
           <Tabs value={view} onValueChange={(v) => setView(v as View)} className="order-3 w-full sm:order-none sm:ml-6 sm:w-auto">
             <TabsList className="w-full bg-navy-foreground/10 sm:w-auto">
+              <TabsTrigger value="home" className="nav-tab"><Home className="mr-1.5 h-4 w-4" />Meu Painel</TabsTrigger>
               <TabsTrigger value="kanban" className="nav-tab"><KanbanSquare className="mr-1.5 h-4 w-4" />Kanban</TabsTrigger>
               <TabsTrigger value="dashboard" className="nav-tab"><BarChart3 className="mr-1.5 h-4 w-4" />Dashboard</TabsTrigger>
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => openNew()} className="ml-auto bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
+          <Select value={me} onValueChange={setMe}>
+            <SelectTrigger className="ml-auto w-44 border-navy-foreground/20 bg-navy-foreground/10 text-navy-foreground" aria-label="Usuário atual"><SelectValue /></SelectTrigger>
+            <SelectContent>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+          </Select>
+          <Button onClick={() => openNew()} className=" bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
         </div>
       </header>
-      <div className="border-b border-border bg-card">
+      {view !== "home" && <div className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <nav aria-label="Escopo" className="flex flex-wrap items-center gap-1.5">
             <Select value={filters.company} onValueChange={(v) => setFilters({ company: v, project: "all" })}>
@@ -86,9 +94,20 @@ function App() {
             <Input className="pl-9" placeholder="Buscar documentos..." value={filters.search} onChange={(e) => setFilters({ search: e.target.value })} maxLength={100} />
           </div>
         </div>
-      </div>
+      </div>}
       <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
-        {view === "kanban" && <KanbanView onEdit={openEdit} onNew={openNew} />}
+        {view === "home" && <HomeView me={me} onEdit={openEdit} onOpenProject={(code) => { setFilters({ company: "all", project: code, person: "all", docType: "all", search: "" }); setView("kanban"); }} />}
+        {view === "kanban" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Agrupar por</span>
+              <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+                <TabsList><TabsTrigger value="status">Status</TabsTrigger><TabsTrigger value="person">Colaborador</TabsTrigger><TabsTrigger value="project">Projeto</TabsTrigger></TabsList>
+              </Tabs>
+            </div>
+            <KanbanView groupBy={groupBy} onEdit={openEdit} onNew={openNew} />
+          </div>
+        )}
         {view === "dashboard" && <DashboardView />}
         {view === "table" && <TableView onEdit={openEdit} />}
       </main>
