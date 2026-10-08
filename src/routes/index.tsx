@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, Home, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { HomeView } from "@/components/planner/HomeView";
 import { DashboardView } from "@/components/planner/DashboardView";
 import { TableView } from "@/components/planner/TableView";
 import { TaskDialog } from "@/components/planner/TaskDialog";
+import { TrashView, useUndoShortcut } from "@/components/planner/Trash";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,10 +31,11 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-type View = "home" | "kanban" | "dashboard" | "table";
+type View = "home" | "kanban" | "dashboard" | "table" | "trash";
 
 function App() {
-  const { filters, setFilters, projects, companies, docTypes } = useTasks();
+  const { filters, setFilters, projects, companies, docTypes, trash } = useTasks();
+  useUndoShortcut();
   const [view, setView] = useState<View>("home");
   const [me, setMe] = useState("p1");
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
@@ -58,6 +60,7 @@ function App() {
               <TabsTrigger value="kanban" className="nav-tab"><KanbanSquare className="mr-1.5 h-4 w-4" />Kanban</TabsTrigger>
               <TabsTrigger value="dashboard" className="nav-tab"><BarChart3 className="mr-1.5 h-4 w-4" />Dashboard</TabsTrigger>
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
+              <TabsTrigger value="trash" className="nav-tab"><Trash2 className="mr-1.5 h-4 w-4" />Lixeira{trash.length > 0 && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{trash.length}</span>}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Select value={me} onValueChange={setMe}>
@@ -67,7 +70,7 @@ function App() {
           <Button onClick={() => openNew()} className=" bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
         </div>
       </header>
-      {view !== "home" && <div className="border-b border-border bg-card">
+      {view !== "home" && view !== "trash" && <div className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <nav aria-label="Escopo" className="flex flex-wrap items-center gap-1.5">
             <Select value={filters.company} onValueChange={(v) => setFilters({ company: v, project: "all" })}>
@@ -89,6 +92,7 @@ function App() {
             <SelectTrigger className="w-full sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">Todos os colaboradores</SelectItem>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
+          <Button variant={filters.qualityOnly ? "default" : "outline"} onClick={() => setFilters({ qualityOnly: !filters.qualityOnly })}><ShieldAlert className="h-4 w-4" />Retrabalho Qualidade</Button>
           <div className="relative min-w-[200px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Buscar documentos..." value={filters.search} onChange={(e) => setFilters({ search: e.target.value })} maxLength={100} />
@@ -110,6 +114,7 @@ function App() {
         )}
         {view === "dashboard" && <DashboardView />}
         {view === "table" && <TableView onEdit={openEdit} />}
+        {view === "trash" && <TrashView />}
       </main>
       <TaskDialog open={open} onOpenChange={setOpen} task={editing} defaultStatus={defStatus} />
     </div>

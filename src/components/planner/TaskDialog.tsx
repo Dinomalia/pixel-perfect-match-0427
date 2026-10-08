@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
+import { toastDeleted } from "./Trash";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ const schema = z.object({
 const NEW = "__new__";
 
 export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: boolean; onOpenChange: (o: boolean) => void; task?: Task | null; defaultStatus?: Status }) {
-  const { projects, companies, docTypes, upsertTask, addProject, addCompany, deleteTask, companyOf, filters } = useTasks();
+  const { projects, companies, docTypes, upsertTask, addProject, addCompany, deleteTask, undo, companyOf, filters } = useTasks();
   const blank = (): Task => ({ id: "", title: "", projectCode: "", docType: "", gedeUrl: "", assignees: [], dueDate: "", status: defaultStatus ?? "Elaboração", priority: "Média", notes: "" });
   const [form, setForm] = useState<Task>(blank);
   const [companyId, setCompanyId] = useState("");
@@ -147,10 +148,14 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
               ))}
             </div>
           </div>
+          <div className="sm:col-span-2 grid gap-3 rounded-md border border-status-rework/40 bg-status-rework/5 p-3 sm:grid-cols-[180px_1fr]">
+            <div className="space-y-1.5"><Label>Retrabalho Qualidade (ocorrências)</Label><Input type="number" min={0} max={99} value={form.qualityRework ?? 0} onChange={(e) => set("qualityRework", Math.max(0, Math.min(99, Number(e.target.value) || 0)))} /></div>
+            <div className="space-y-1.5"><Label>Motivos</Label><Input value={form.qualityReworkNote ?? ""} onChange={(e) => set("qualityReworkNote", e.target.value)} maxLength={300} placeholder="Ex.: inconsistência de tag, norma não atendida" /></div>
+          </div>
           <div className="sm:col-span-2 space-y-1.5"><Label>Descrição / Observações</Label><Textarea rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} maxLength={2000} /></div>
         </div>
         <DialogFooter className="gap-2">
-          {form.id && <Button variant="outline" className="mr-auto text-destructive" onClick={() => { deleteTask(form.id); onOpenChange(false); toast.success("Documento excluído"); }}>Excluir</Button>}
+          {form.id && <Button variant="outline" className="mr-auto text-destructive" onClick={() => { deleteTask(form.id); onOpenChange(false); toastDeleted("Documento movido para a Lixeira", undo); }}>Excluir</Button>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={save}>Salvar</Button>
         </DialogFooter>
