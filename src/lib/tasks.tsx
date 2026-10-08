@@ -30,7 +30,7 @@ export type Task = {
   notes: string;
   revision?: string;
   history?: RevisionSnapshot[];
-  deletedAt?: string;
+  deletedAt?: string | undefined;
   qualityRework?: number;
   qualityReworkNote?: string;
 };
