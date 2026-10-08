@@ -30,7 +30,12 @@ export type Task = {
   notes: string;
   revision?: string;
   history?: RevisionSnapshot[];
+  deletedAt?: string;
+  qualityRework?: number;
+  qualityReworkNote?: string;
 };
+export type TrashRevision = { id: string; taskId: string; taskTitle: string; snap: RevisionSnapshot; wasCurrent: boolean; deletedAt: string };
+export type TrashItem = { kind: "card"; id: string; title: string; rev: string; status: Status; deletedAt: string } | ({ kind: "revision" } & TrashRevision);
 export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string };
 export type NewRevisionInput = { rev: string; status: Status; gedeUrl: string; note: string; dueDate: string };
 
@@ -110,7 +115,7 @@ const SEED_TASKS: Task[] = SEED_TASKS_BASE.map((x) => {
   return x;
 });
 
-type Filters = { search: string; company: string; project: string; person: string; docType: string };
+type Filters = { search: string; company: string; project: string; person: string; docType: string; qualityOnly?: boolean };
 
 type Ctx = {
   tasks: Task[];
@@ -122,6 +127,11 @@ type Ctx = {
   setFilters: (f: Partial<Filters>) => void;
   upsertTask: (task: Task) => void;
   deleteTask: (id: string) => void;
+  deleteRevision: (taskId: string, rev: string | null) => void;
+  trash: TrashItem[];
+  restore: (item: TrashItem) => void;
+  purge: (item: TrashItem) => void;
+  undo: () => void;
   moveTask: (id: string, status: Status) => void;
   newRevision: (id: string, input: NewRevisionInput) => void;
   addProject: (p: Project) => void;
@@ -133,7 +143,10 @@ const TasksContext = createContext<Ctx | null>(null);
 const KEY = "planner-bi-v2";
 
 export function TasksProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(SEED_TASKS);
+  const [allTasks, setTasks] = useState<Task[]>(SEED_TASKS);
+  const [revTrash, setRevTrash] = useState<TrashRevision[]>([]);
+  const [undoStack, setUndoStack] = useState<TrashItem[]>([]);
+  const tasks = useMemo(() => allTasks.filter((t) => !t.deletedAt), [allTasks]);
   const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
   const [companies, setCompanies] = useState<Company[]>(SEED_COMPANIES);
   const [loaded, setLoaded] = useState(false);
@@ -147,13 +160,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (Array.isArray(d.tasks)) setTasks(d.tasks);
         if (Array.isArray(d.projects)) setProjects(d.projects);
         if (Array.isArray(d.companies)) setCompanies(d.companies);
+        if (Array.isArray(d.revTrash)) setRevTrash(d.revTrash);
       }
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks, projects, companies }));
-  }, [tasks, projects, companies, loaded]);
+    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash }));
+  }, [allTasks, projects, companies, revTrash, loaded]);
 
   const companyOf = (code: string) => {
     const p = projects.find((x) => x.code === code);
@@ -174,6 +188,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       if (filters.project !== "all" && t.projectCode !== filters.project) return false;
       if (filters.person !== "all" && !t.assignees.includes(filters.person)) return false;
       if (filters.docType !== "all" && t.docType !== filters.docType) return false;
+      if (filters.qualityOnly && !(t.qualityRework ?? 0)) return false;
       if (!q) return true;
       const comp = companies.find((c) => c.id === proj?.companyId)?.name ?? "";
       const names = t.assignees.map((a) => personById(a)?.name ?? "").join(" ");
@@ -181,11 +196,65 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     });
   }, [tasks, filters, projects, companies]);
 
+  const now = () => new Date().toISOString();
+  const trash: TrashItem[] = [
+    ...allTasks.filter((t) => t.deletedAt).map((t) => ({ kind: "card" as const, id: t.id, title: t.title, rev: revOf(t), status: t.status, deletedAt: t.deletedAt! })),
+    ...revTrash.map((r) => ({ kind: "revision" as const, ...r })),
+  ].sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+
+  const restore = (item: TrashItem) => {
+    setUndoStack((u) => u.filter((x) => x.id !== item.id));
+    if (item.kind === "card") { setTasks((ts) => ts.map((x) => (x.id === item.id ? { ...x, deletedAt: undefined } : x))); return; }
+    setRevTrash((r) => r.filter((x) => x.id !== item.id));
+    setTasks((ts) => ts.map((x) => {
+      if (x.id !== item.taskId) return x;
+      if (item.wasCurrent) {
+        const cur: RevisionSnapshot = { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: now().slice(0, 10) };
+        const s = item.snap;
+        return { ...x, revision: s.rev, status: s.status, assignees: s.assignees, gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, history: [...(x.history ?? []), cur] };
+      }
+      return { ...x, history: [...(x.history ?? []), item.snap].sort((a, b) => a.archivedAt.localeCompare(b.archivedAt)) };
+    }));
+  };
+
   const value: Ctx = {
+    trash, restore,
+    purge: (item) => item.kind === "card" ? setTasks((ts) => ts.filter((x) => x.id !== item.id)) : setRevTrash((r) => r.filter((x) => x.id !== item.id)),
+    undo: () => {
+      const last = undoStack[undoStack.length - 1];
+      if (last && trash.some((x) => x.id === last.id)) restore(last);
+      else setUndoStack((u) => u.slice(0, -1));
+    },
+    deleteRevision: (taskId, rev) => {
+      const x = allTasks.find((t) => t.id === taskId);
+      if (!x) return;
+      const hist = x.history ?? [];
+      const id = `r${Date.now()}`;
+      let entry: TrashRevision;
+      if (rev === null) {
+        const prev = hist[hist.length - 1];
+        if (!prev) return;
+        entry = { id, taskId, taskTitle: x.title, wasCurrent: true, deletedAt: now(), snap: { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: now().slice(0, 10) } };
+        setTasks((ts) => ts.map((t) => t.id === taskId ? { ...t, revision: prev.rev, status: prev.status, assignees: prev.assignees.length ? prev.assignees : t.assignees, gedeUrl: prev.gedeUrl, dueDate: prev.dueDate, notes: prev.note, history: hist.slice(0, -1) } : t));
+      } else {
+        const snap = hist.find((h) => h.rev === rev);
+        if (!snap) return;
+        entry = { id, taskId, taskTitle: x.title, wasCurrent: false, deletedAt: now(), snap };
+        setTasks((ts) => ts.map((t) => t.id === taskId ? { ...t, history: hist.filter((h) => h !== snap) } : t));
+      }
+      setRevTrash((r) => [...r, entry]);
+      setUndoStack((u) => [...u, { kind: "revision", ...entry }]);
+    },
     tasks, projects, companies, docTypes, filtered, filters, companyOf,
     setFilters: (f) => setF((p) => ({ ...p, ...f })),
     upsertTask: (task) => setTasks((ts) => (ts.some((x) => x.id === task.id) ? ts.map((x) => (x.id === task.id ? task : x)) : [...ts, task])),
-    deleteTask: (id) => setTasks((ts) => ts.filter((x) => x.id !== id)),
+    deleteTask: (id) => {
+      const x = allTasks.find((t) => t.id === id);
+      if (!x) return;
+      const d = now();
+      setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, deletedAt: d } : t)));
+      setUndoStack((u) => [...u, { kind: "card", id, title: x.title, rev: revOf(x), status: x.status, deletedAt: d }]);
+    },
     moveTask: (id, status) => setTasks((ts) => ts.map((x) => (x.id === id ? { ...x, status } : x))),
     newRevision: (id, i) => setTasks((ts) => ts.map((x) => {
       if (x.id !== id) return x;
