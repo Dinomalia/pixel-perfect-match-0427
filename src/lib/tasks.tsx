@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export const STATUSES = ["Elaboração", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
 export type Status = (typeof STATUSES)[number];
@@ -217,10 +217,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const value: Ctx = {
+  const undoRef = useRef<() => void>(() => {});
+  const value: Ctx & { _undoImpl: () => void } = {
     trash, restore,
     purge: (item) => item.kind === "card" ? setTasks((ts) => ts.filter((x) => x.id !== item.id)) : setRevTrash((r) => r.filter((x) => x.id !== item.id)),
-    undo: () => {
+    undo: () => undoRef.current(),
+    _undoImpl: () => {
       const last = undoStack[undoStack.length - 1];
       if (last && trash.some((x) => x.id === last.id)) restore(last);
       else setUndoStack((u) => u.slice(0, -1));
@@ -270,6 +272,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       return id;
     },
   };
+  undoRef.current = value._undoImpl;
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
 
