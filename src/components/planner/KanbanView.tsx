@@ -63,11 +63,14 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
               <div key={t.id} className="relative" style={{ paddingTop: n >= 2 ? 30 : n === 1 ? 22 : 0 }}>
                 {n >= 2 && <div aria-hidden className="absolute left-0 right-3 top-0 h-16 rounded-lg border border-border bg-card/50 shadow-card" />}
                 {back && (
-                  <button type="button" title={`Trazer Rev. ${back.rev} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }}
-                    className={cn("absolute left-1.5 right-1.5 h-16 rounded-lg border border-border border-l-4 bg-card/90 px-3 py-1.5 text-left shadow-card transition hover:bg-card", STATUS_STYLE[back.status].border)} style={{ top: n >= 2 ? 8 : 0 }}>
+                  <button type="button" title={`Clique para trazer a Rev. ${back.rev} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }}
+                    className={cn("absolute left-0 right-0 h-16 overflow-hidden rounded-lg border border-border border-l-4 bg-card px-3 pt-2.5 text-left shadow-card transition hover:bg-card", STATUS_STYLE[back.status].border)} style={{ top: n >= 2 ? 6 : 0 }}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.projectCode} · {back.status}</p>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">Rev. {back.rev}</span>
+                      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{companyOf(t.projectCode)?.name} • {t.projectCode}</p>
+                      <div className="flex items-center gap-1">
+                        <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">Rev. {back.rev}</span>
+                        <DocTypeBadge type={t.docType} />
+                      </div>
                     </div>
                   </button>
                 )}
@@ -100,7 +103,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                     <Avatars ids={t.assignees} />
                   </div>
                 </div>
-                {back && <button type="button" onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }} className="text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline">📚 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"} · trazer Rev. {back.rev} para frente</button>}
+                {back && <button type="button" onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }} className="text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline">🗂 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"}</button>}
               </article>
               </ContextMenuTrigger>
               <ContextMenuContent>
