@@ -107,7 +107,8 @@ const SEED_TASKS_BASE: Task[] = [
 ];
 
 const SEED_TASKS: Task[] = SEED_TASKS_BASE.map((x) => {
-  if (x.id === "t2") return { ...x, revision: "B", history: [
+  if (x.id === "t8") return { ...x, qualityRework: 1 };
+  if (x.id === "t2") return { ...x, folderPath: "Z:\\Projetos\\PRJ-1420\\P&ID", qualityRework: 1, revision: "B", history: [
     { rev: "0", status: "Aprovado", assignees: ["p2"], gedeUrl: `${x.gedeUrl}/rev0`, dueDate: "2026-08-10", note: "Emissão inicial.", archivedAt: "2026-08-12" },
     { rev: "A", status: "Retrabalho", assignees: ["p2", "p1"], gedeUrl: `${x.gedeUrl}/revA`, dueDate: "2026-09-15", note: "Inclusão de novas linhas de utilidades.", archivedAt: "2026-09-20" },
   ] };
