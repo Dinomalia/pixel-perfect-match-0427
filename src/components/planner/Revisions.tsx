@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, History, Layers } from "lucide-react";
+import { ChevronDown, History, Layers, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,14 @@ import { cn } from "@/lib/utils";
 import { STATUS_STYLE, fmtDate, nextRev, personById, revOf, useTasks, type RevisionSnapshot, type Task } from "@/lib/tasks";
 import { StatusBadge } from "./Shared";
 
-export function RevisionSelect({ task, onView }: { task: Task; onView: (s: RevisionSnapshot) => void }) {
+export function confirmDeleteRevision(task: Task, rev: string | null, del: (id: string, rev: string | null) => void) {
+  const label = rev ?? revOf(task);
+  if (rev === null && !(task.history ?? []).length) { window.alert("Esta é a única revisão. Exclua o documento inteiro pelo menu de detalhes."); return; }
+  if (window.confirm(`Excluir a Rev. ${label} de "${task.title}"? Ela irá para a Lixeira.`)) del(task.id, rev);
+}
+
+export function RevisionSelect({ task }: { task: Task }) {
+  const { swapRevision, deleteRevision } = useTasks();
   const history = task.history ?? [];
   return (
     <DropdownMenu>
@@ -22,16 +29,20 @@ export function RevisionSelect({ task, onView }: { task: Task; onView: (s: Revis
         <DropdownMenuItem className="gap-2">
           <span className={cn("h-2 w-2 rounded-full", STATUS_STYLE[task.status].dot)} />
           <span className="font-semibold">Rev. {revOf(task)}</span>
-          <span className="ml-auto text-[11px] text-muted-foreground">atual · {task.status}</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">no topo · {task.status}</span>
         </DropdownMenuItem>
         {history.length > 0 && <DropdownMenuSeparator />}
         {[...history].reverse().map((h) => (
-          <DropdownMenuItem key={h.rev + h.archivedAt} onSelect={() => onView(h)} className="gap-2">
+          <DropdownMenuItem key={h.rev + h.archivedAt} onSelect={() => swapRevision(task.id, h.rev)} className="gap-2">
             <span className={cn("h-2 w-2 rounded-full", STATUS_STYLE[h.status].dot)} />
             <span>Rev. {h.rev}</span>
             <span className="ml-auto text-[11px] text-muted-foreground">{fmtDate(h.archivedAt)} · {h.status}</span>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onSelect={() => confirmDeleteRevision(task, null, deleteRevision)}>
+          <Trash2 className="h-3.5 w-3.5" />Excluir esta revisão (Rev. {revOf(task)})
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
