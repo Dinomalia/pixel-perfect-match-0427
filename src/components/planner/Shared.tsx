@@ -1,9 +1,10 @@
-import { AlertTriangle, CalendarDays, ChevronDown, ExternalLink } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, ExternalLink, FolderOpen } from "lucide-react";
+import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PRIORITY_STYLE, STATUSES, STATUS_STYLE, daysUntil, fmtDate, initials, personById, useTasks, type Priority, type Status, type Task } from "@/lib/tasks";
+import { PRIORITY_STYLE, STATUSES, STATUS_STYLE, daysUntil, fmtDate, initials, isNetPath, personById, useTasks, type Priority, type Status, type Task } from "@/lib/tasks";
 
 export function StatusBadge({ status }: { status: Status }) {
   return (
@@ -39,8 +40,21 @@ export function Avatars({ ids, size = "sm" }: { ids: string[]; size?: "sm" | "md
   );
 }
 
+export async function copyPath(v: string) {
+  try { await navigator.clipboard.writeText(v); toast.success("Caminho copiado!"); } catch { toast.error("Não foi possível copiar"); }
+}
+
+export function FolderCopy({ path }: { path?: string | undefined }) {
+  if (!path) return null;
+  return (
+    <button type="button" title={`Copiar caminho da pasta: ${path}`} aria-label="Copiar caminho da pasta" onClick={(e) => { e.stopPropagation(); copyPath(path); }}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-primary transition-colors hover:bg-accent"><FolderOpen className="h-3 w-3" /></button>
+  );
+}
+
 export function GedeLink({ url }: { url: string }) {
   if (!url) return null;
+  if (isNetPath(url)) return <FolderCopy path={url} />;
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
       className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent">
