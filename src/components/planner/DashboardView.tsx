@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Clock, FolderKanban, ListTodo } from "lucide-react";
+import { ShieldAlert, AlertTriangle, CheckCircle2, Clock, FolderKanban, ListTodo } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -63,12 +63,24 @@ export function DashboardView() {
   const activeProjects = new Set(filtered.map((t) => t.projectCode)).size;
   const count = (s: string) => filtered.filter((t) => t.status === s).length;
 
-  const byStatus = STATUSES.map((s) => ({ name: s, value: count(s), fill: STATUS_STYLE[s].chart }));
+  const qr = filtered.filter((t) => t.qualityRework);
+  const byStatus = [...STATUSES.map((s) => ({ name: s, value: count(s), fill: STATUS_STYLE[s].chart })), { name: "Retrabalho Qualidade", value: qr.length, fill: "var(--destructive)" }];
+  const seg = (keyOf: (t: Task) => string) => {
+    const m = new Map<string, number>();
+    qr.forEach((t) => { const k = keyOf(t); m.set(k, (m.get(k) ?? 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  };
+  const qrSegs = [
+    { title: "Por projeto", rows: seg((t) => t.projectCode) },
+    { title: "Por empresa / cliente", rows: seg((t) => (companyOf(t.projectCode)?.name ?? "—").toUpperCase()) },
+    { title: "Por tipo / disciplina", rows: seg((t) => `[${t.docType || "—"}]`) },
+  ];
   const byPerson = PEOPLE.map((p) => ({ name: p.name.split(" ")[0], value: filtered.filter((t) => t.assignees.includes(p.id)).length })).sort((a, b) => b.value - a.value);
   const byType = docTypes.map((d) => {
     const ts = filtered.filter((t) => t.docType === d);
     const row: Record<string, string | number> = { name: d, total: ts.length };
     STATUSES.forEach((s) => (row[s] = ts.filter((t) => t.status === s).length));
+    row["Retrabalho Qualidade"] = ts.filter((t) => t.qualityRework).length;
     return row;
   }).filter((r) => (r["total"] as number) > 0);
 
@@ -77,11 +89,12 @@ export function DashboardView() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <Kpi label="Projetos ativos" value={activeProjects} icon={FolderKanban} />
         <Kpi label="Documentos no ciclo" value={filtered.length} icon={ListTodo} />
         <Kpi label="Taxa de retrabalho" value={`${filtered.length ? Math.round((count("Retrabalho") / filtered.length) * 100) : 0}%`} icon={AlertTriangle} tone="rework" />
         <Kpi label="Em aprovação (cliente/DCC)" value={count("Em Aprovação")} icon={Clock} tone="pending" />
+        <Kpi label="Retrabalho Qualidade" value={qr.length} icon={ShieldAlert} tone="rework" />
         <Kpi label="Taxa de aprovação final" value={`${pct(filtered)}%`} icon={CheckCircle2} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
@@ -103,6 +116,7 @@ export function DashboardView() {
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
               <Tooltip {...tip} cursor={{ fill: "var(--muted)" }} />
               {STATUSES.map((s) => <Bar key={s} dataKey={s} stackId="a" fill={STATUS_STYLE[s].chart} />)}
+              <Bar dataKey="Retrabalho Qualidade" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Panel>
@@ -118,6 +132,20 @@ export function DashboardView() {
           </ResponsiveContainer>
         </Panel>
       </div>
+      <Panel title={`Retrabalho Qualidade · ${qr.length} documento(s)`}>
+        <div className="grid gap-4 md:grid-cols-3">
+          {qrSegs.map((g) => (
+            <div key={g.title}>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">{g.title}</p>
+              {g.rows.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum registro</p> : (
+                <ul className="space-y-1.5">{g.rows.map(([k, v]) => (
+                  <li key={k} className="flex items-center justify-between rounded-md border border-status-rework/30 bg-status-rework/5 px-3 py-1.5 text-sm"><span className="font-mono text-xs font-medium">{k}</span><span className="font-bold text-status-rework">{v}</span></li>
+                ))}</ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </Panel>
       <div className="grid gap-4 xl:grid-cols-2">
         <Panel title="Aprovação por empresa"><RateTable rows={companyRows} /></Panel>
         <Panel title="Aprovação por projeto"><RateTable rows={projectRows} /></Panel>
