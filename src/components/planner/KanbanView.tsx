@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { Layers, Plus } from "lucide-react";
+import { Layers, Plus, ShieldAlert, Trash2 } from "lucide-react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PEOPLE, STATUSES, STATUS_STYLE, initials, revOf, useTasks, type RevisionSnapshot, type Status, type Task } from "@/lib/tasks";
-import { Avatars, DocTypeBadge, DueDate, GedeLink, PriorityBadge, StatusSelect } from "./Shared";
-import { NewRevisionDialog, RevisionSelect, SnapshotDialog } from "./Revisions";
+import { PEOPLE, STATUSES, STATUS_STYLE, initials, revOf, useTasks, type Status, type Task } from "@/lib/tasks";
+import { Avatars, DocTypeBadge, DueDate, FolderCopy, GedeLink, PriorityBadge, StatusSelect } from "./Shared";
+import { NewRevisionDialog, RevisionSelect, confirmDeleteRevision } from "./Revisions";
 
 export type GroupBy = "status" | "person" | "project";
 type Col = { key: string; title: string; sub?: string; dot?: string; avatar?: string; items: Task[] };
 
 export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdit: (t: Task) => void; onNew: (s: Status) => void }) {
-  const { filtered, companyOf, moveTask, upsertTask, projects } = useTasks();
+  const { filtered, companyOf, moveTask, upsertTask, projects, swapRevision, deleteRevision, toggleQualityRework } = useTasks();
   const [over, setOver] = useState<string | null>(null);
   const [revTask, setRevTask] = useState<Task | null>(null);
-  const [snap, setSnap] = useState<{ task: Task; snap: RevisionSnapshot } | null>(null);
 
   let cols: Col[];
   if (groupBy === "status") {
@@ -55,11 +55,24 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
           </header>
           <div className="flex flex-1 flex-col gap-2.5">
             {c.items.map((t) => {
-              const n = t.history?.length ?? 0;
+              const hist = t.history ?? [];
+              const n = hist.length;
+              const back = hist[n - 1];
+              const qr = !!t.qualityRework;
               return (
-              <div key={t.id} className="relative" style={{ marginBottom: Math.min(n, 2) * 5 }}>
-                {n >= 2 && <div aria-hidden className="absolute inset-x-3 -bottom-2.5 h-full rounded-lg border border-border bg-card/60 shadow-card" />}
-                {n >= 1 && <div aria-hidden className="absolute inset-x-1.5 -bottom-1.5 h-full rounded-lg border border-border bg-card/80 shadow-card" />}
+              <div key={t.id} className="relative" style={{ paddingTop: n >= 2 ? 30 : n === 1 ? 22 : 0 }}>
+                {n >= 2 && <div aria-hidden className="absolute left-0 right-3 top-0 h-16 rounded-lg border border-border bg-card/50 shadow-card" />}
+                {back && (
+                  <button type="button" title={`Trazer Rev. ${back.rev} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }}
+                    className={cn("absolute left-1.5 right-1.5 h-16 rounded-lg border border-border border-l-4 bg-card/90 px-3 py-1.5 text-left shadow-card transition hover:bg-card", STATUS_STYLE[back.status].border)} style={{ top: n >= 2 ? 8 : 0 }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t.projectCode} · {back.status}</p>
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">Rev. {back.rev}</span>
+                    </div>
+                  </button>
+                )}
+              <ContextMenu>
+              <ContextMenuTrigger asChild>
               <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)} onClick={() => onEdit(t)}
                 className={cn("relative cursor-grab space-y-2 rounded-lg border border-border border-l-4 bg-card p-3 shadow-card transition hover:shadow-card-hover active:cursor-grabbing", STATUS_STYLE[t.status].border)}>
                 <div className="flex items-center justify-between gap-2">
@@ -70,23 +83,33 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                   </div>
                 </div>
                 <h3 className="text-sm font-semibold leading-snug">{t.title}</h3>
+                {qr && <span className="inline-flex items-center gap-1 rounded-md border border-status-rework/50 bg-status-rework/15 px-2 py-0.5 text-[11px] font-semibold text-status-rework"><ShieldAlert className="h-3 w-3" />Retrabalho Qualidade</span>}
                 {t.notes && <p className="line-clamp-2 text-xs text-muted-foreground">{t.notes}</p>}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <StatusSelect task={t} />
-                    <RevisionSelect task={t} onView={(s) => setSnap({ task: t, snap: s })} />
+                    <RevisionSelect task={t} />
                   </div>
                   <PriorityBadge priority={t.priority} />
                 </div>
                 <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-                  <div className="flex items-center gap-2"><GedeLink url={t.gedeUrl} /><DueDate task={t} /></div>
+                  <div className="flex items-center gap-1.5"><GedeLink url={t.gedeUrl} /><FolderCopy path={t.folderPath} /><DueDate task={t} /></div>
                   <div className="flex items-center gap-1">
+                    <Button size="icon" variant="ghost" className={cn("h-7 w-7", qr && "bg-status-rework/15 text-status-rework")} title={qr ? "Remover Retrabalho Qualidade" : "Registrar Retrabalho Qualidade"} aria-label="Registrar Retrabalho Qualidade" aria-pressed={qr} onClick={(e) => { e.stopPropagation(); toggleQualityRework(t.id); }}><ShieldAlert className="h-3.5 w-3.5" /></Button>
                     <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={(e) => { e.stopPropagation(); setRevTask(t); }}><Layers className="h-3 w-3" />Nova Rev</Button>
                     <Avatars ids={t.assignees} />
                   </div>
                 </div>
-                {n > 0 && <p className="text-[11px] text-muted-foreground">📚 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"}</p>}
+                {back && <button type="button" onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }} className="text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline">📚 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"} · trazer Rev. {back.rev} para frente</button>}
               </article>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onSelect={() => toggleQualityRework(t.id)}><ShieldAlert className="mr-2 h-3.5 w-3.5" />{qr ? "Remover Retrabalho Qualidade" : "Registrar Retrabalho Qualidade"}</ContextMenuItem>
+                <ContextMenuItem onSelect={() => setRevTask(t)}><Layers className="mr-2 h-3.5 w-3.5" />Nova Rev</ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem className="text-destructive focus:text-destructive" onSelect={() => confirmDeleteRevision(t, null, deleteRevision)}><Trash2 className="mr-2 h-3.5 w-3.5" />Excluir esta revisão</ContextMenuItem>
+              </ContextMenuContent>
+              </ContextMenu>
               </div>
             ); })}
             {c.items.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">Arraste documentos para cá</p>}
@@ -94,7 +117,6 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
         </section>
       ))}
       <NewRevisionDialog task={revTask} onClose={() => setRevTask(null)} />
-      <SnapshotDialog task={snap?.task ?? null} snap={snap?.snap ?? null} onClose={() => setSnap(null)} />
     </div>
   );
 }
