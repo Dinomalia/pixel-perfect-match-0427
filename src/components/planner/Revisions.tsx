@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, History, Layers, Trash2 } from "lucide-react";
+import { ChevronDown, History, Layers, Plus, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,10 @@ export function confirmDeleteRevision(task: Task, rev: string | null, del: (id: 
 
 export function RevisionSelect({ task }: { task: Task }) {
   const { swapRevision, deleteRevision } = useTasks();
+  const [newOpen, setNewOpen] = useState(false);
   const history = task.history ?? [];
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
         <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary transition hover:opacity-80">
@@ -40,11 +42,16 @@ export function RevisionSelect({ task }: { task: Task }) {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        <DropdownMenuItem className="gap-2 font-medium text-primary focus:text-primary" onSelect={() => setNewOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />Gerar nova revisão (Rev. {nextRev(revOf(task))})
+        </DropdownMenuItem>
         <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onSelect={() => confirmDeleteRevision(task, null, deleteRevision)}>
           <Trash2 className="h-3.5 w-3.5" />Excluir esta revisão (Rev. {revOf(task)})
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <NewRevisionDialog task={newOpen ? task : null} onClose={() => setNewOpen(false)} />
+    </>
   );
 }
 
