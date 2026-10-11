@@ -29,19 +29,43 @@ export type Task = {
   priority: Priority;
   notes: string;
   revision?: string;
-  history?: RevisionSnapshot[];
+  activeRevisionId?: string;
+  history?: RevisionSnapshot[] | undefined;
   deletedAt?: string | undefined;
-  qualityRework?: number;
-  qualityReworkNote?: string;
-  folderPath?: string;
+  qualityRework?: number | undefined;
+  qualityReworkNote?: string | undefined;
+  folderPath?: string | undefined;
 };
 export type TrashRevision = { id: string; taskId: string; taskTitle: string; snap: RevisionSnapshot; wasCurrent: boolean; deletedAt: string };
 export type TrashItem = { kind: "card"; id: string; title: string; rev: string; status: Status; deletedAt: string } | ({ kind: "revision" } & TrashRevision);
-export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string };
+export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string; title?: string; projectCode?: string; docType?: string; priority?: Priority; folderPath?: string | undefined; qualityRework?: number | undefined; qualityReworkNote?: string | undefined };
 export type NewRevisionInput = { rev: string; status: Status; gedeUrl: string; note: string; dueDate: string };
 
 export const isNetPath = (v: string) => /^([a-zA-Z]:[\\/]|\\\\)/.test(v.trim());
 export const revOf = (t: Task) => t.revision || "0";
+export function snapshotOf(t: Task, archivedAt: string): RevisionSnapshot {
+  return { rev: revOf(t), status: t.status, assignees: [...t.assignees], gedeUrl: t.gedeUrl, dueDate: t.dueDate, note: t.notes, archivedAt, title: t.title, projectCode: t.projectCode, docType: t.docType, priority: t.priority, folderPath: t.folderPath, qualityRework: t.qualityRework, qualityReworkNote: t.qualityReworkNote };
+}
+
+function applySnapshot(t: Task, s: RevisionSnapshot): Task {
+  return { ...t, revision: s.rev, status: s.status, assignees: [...s.assignees], gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, title: s.title ?? t.title, projectCode: s.projectCode ?? t.projectCode, docType: s.docType ?? t.docType, priority: s.priority ?? t.priority, folderPath: s.folderPath, qualityRework: s.qualityRework, qualityReworkNote: s.qualityReworkNote };
+}
+
+export function selectRevision(t: Task, rev?: string): Task {
+  const selected = t.history?.find((h) => h.rev === rev);
+  if (!selected || rev === revOf(t)) return { ...t, activeRevisionId: revOf(t) };
+  return { ...applySnapshot(t, selected), activeRevisionId: selected.rev, history: [...(t.history ?? []).filter((h) => h.rev !== selected.rev), snapshotOf(t, "")] };
+}
+
+export function updateRevision(t: Task, edited: Task): Task {
+  const rev = edited.activeRevisionId ?? revOf(edited);
+  if (rev === revOf(t)) {
+    const { activeRevisionId: _active, ...data } = edited;
+    return { ...data, revision: revOf(t), history: t.history, deletedAt: t.deletedAt };
+  }
+  if (!t.history?.some((h) => h.rev === rev)) return t;
+  return { ...t, history: t.history.map((h) => h.rev === rev ? { ...snapshotOf(edited, h.archivedAt), rev } : h) };
+}
 export const nextRev = (r: string) => {
   const v = r.trim().toUpperCase();
   if (/^\d+$/.test(v)) return String(Number(v) + 1);
@@ -149,9 +173,10 @@ const KEY = "planner-bi-v2";
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const [allTasks, setTasks] = useState<Task[]>(SEED_TASKS);
+  const [activeRevisions, setActiveRevisions] = useState<Record<string, string>>({});
   const [revTrash, setRevTrash] = useState<TrashRevision[]>([]);
   const [undoStack, setUndoStack] = useState<TrashItem[]>([]);
-  const tasks = useMemo(() => allTasks.filter((t) => !t.deletedAt), [allTasks]);
+  const tasks = useMemo(() => allTasks.filter((t) => !t.deletedAt).map((t) => selectRevision(t, activeRevisions[t.id])), [allTasks, activeRevisions]);
   const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
   const [companies, setCompanies] = useState<Company[]>(SEED_COMPANIES);
   const [loaded, setLoaded] = useState(false);
@@ -203,7 +228,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const now = () => new Date().toISOString();
   const trash: TrashItem[] = [
-    ...allTasks.filter((t) => t.deletedAt).map((t) => ({ kind: "card" as const, id: t.id, title: t.title, rev: revOf(t), status: t.status, deletedAt: t.deletedAt! })),
+    ...allTasks.flatMap((t) => t.deletedAt ? [{ kind: "card" as const, id: t.id, title: t.title, rev: revOf(t), status: t.status, deletedAt: t.deletedAt }] : []),
     ...revTrash.map((r) => ({ kind: "revision" as const, ...r })),
   ].sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 
@@ -214,9 +239,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     setTasks((ts) => ts.map((x) => {
       if (x.id !== item.taskId) return x;
       if (item.wasCurrent) {
-        const cur: RevisionSnapshot = { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: now().slice(0, 10) };
+        const cur = snapshotOf(x, now().slice(0, 10));
         const s = item.snap;
-        return { ...x, revision: s.rev, status: s.status, assignees: s.assignees, gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, history: [...(x.history ?? []), cur] };
+        return { ...applySnapshot(x, s), history: [...(x.history ?? []), cur] };
       }
       return { ...x, history: [...(x.history ?? []), item.snap].sort((a, b) => a.archivedAt.localeCompare(b.archivedAt)) };
     }));
@@ -236,25 +261,27 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const x = allTasks.find((t) => t.id === taskId);
       if (!x) return;
       const hist = x.history ?? [];
+      const targetRev = rev ?? activeRevisions[taskId] ?? revOf(x);
       const id = `r${Date.now()}`;
       let entry: TrashRevision;
-      if (rev === null) {
+      if (targetRev === revOf(x)) {
         const prev = hist[hist.length - 1];
         if (!prev) return;
-        entry = { id, taskId, taskTitle: x.title, wasCurrent: true, deletedAt: now(), snap: { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: now().slice(0, 10) } };
-        setTasks((ts) => ts.map((t) => t.id === taskId ? { ...t, revision: prev.rev, status: prev.status, assignees: prev.assignees.length ? prev.assignees : t.assignees, gedeUrl: prev.gedeUrl, dueDate: prev.dueDate, notes: prev.note, history: hist.slice(0, -1) } : t));
+        entry = { id, taskId, taskTitle: x.title, wasCurrent: true, deletedAt: now(), snap: snapshotOf(x, now().slice(0, 10)) };
+        setTasks((ts) => ts.map((t) => t.id === taskId ? { ...applySnapshot(t, prev), history: hist.slice(0, -1) } : t));
       } else {
-        const snap = hist.find((h) => h.rev === rev);
+        const snap = hist.find((h) => h.rev === targetRev);
         if (!snap) return;
         entry = { id, taskId, taskTitle: x.title, wasCurrent: false, deletedAt: now(), snap };
         setTasks((ts) => ts.map((t) => t.id === taskId ? { ...t, history: hist.filter((h) => h !== snap) } : t));
       }
       setRevTrash((r) => [...r, entry]);
+      setActiveRevisions((a) => { const next = { ...a }; delete next[taskId]; return next; });
       setUndoStack((u) => [...u, { kind: "revision", ...entry }]);
     },
     tasks, projects, companies, docTypes, filtered, filters, companyOf,
     setFilters: (f) => setF((p) => ({ ...p, ...f })),
-    upsertTask: (task) => setTasks((ts) => (ts.some((x) => x.id === task.id) ? ts.map((x) => (x.id === task.id ? task : x)) : [...ts, task])),
+    upsertTask: (task) => setTasks((ts) => (ts.some((x) => x.id === task.id) ? ts.map((x) => (x.id === task.id ? updateRevision(x, task) : x)) : [...ts, task])),
     deleteTask: (id) => {
       const x = allTasks.find((t) => t.id === id);
       if (!x) return;
@@ -262,21 +289,28 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, deletedAt: d } : t)));
       setUndoStack((u) => [...u, { kind: "card", id, title: x.title, rev: revOf(x), status: x.status, deletedAt: d }]);
     },
-    moveTask: (id, status) => setTasks((ts) => ts.map((x) => (x.id === id ? { ...x, status } : x))),
-    newRevision: (id, i) => setTasks((ts) => ts.map((x) => {
+    moveTask: (id, status) => setTasks((ts) => ts.map((x) => x.id === id ? updateRevision(x, { ...selectRevision(x, activeRevisions[id]), status }) : x)),
+    newRevision: (id, i) => {
+      const existing = allTasks.find((x) => x.id === id);
+      if (!existing || i.rev === revOf(existing) || existing.history?.some((h) => h.rev === i.rev)) return;
+      setActiveRevisions((a) => ({ ...a, [id]: i.rev }));
+      setTasks((ts) => ts.map((x) => {
       if (x.id !== id) return x;
-      const snap: RevisionSnapshot = { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: new Date().toISOString().slice(0, 10) };
+      if (i.rev === revOf(x) || x.history?.some((h) => h.rev === i.rev)) return x;
+      const snap = snapshotOf(x, new Date().toISOString().slice(0, 10));
       return { ...x, revision: i.rev, status: i.status, gedeUrl: i.gedeUrl, dueDate: i.dueDate, notes: i.note, history: [...(x.history ?? []), snap] };
-    })),
-    swapRevision: (id, rev) => setTasks((ts) => ts.map((x) => {
+      }));
+    },
+    swapRevision: (id, rev) => {
+      const task = allTasks.find((x) => x.id === id);
+      if (!task || (rev !== revOf(task) && !task.history?.some((h) => h.rev === rev))) return;
+      setActiveRevisions((a) => ({ ...a, [id]: rev }));
+    },
+    toggleQualityRework: (id) => setTasks((ts) => ts.map((x) => {
       if (x.id !== id) return x;
-      const hist = x.history ?? [];
-      const s = hist.find((h) => h.rev === rev);
-      if (!s) return x;
-      const cur: RevisionSnapshot = { rev: revOf(x), status: x.status, assignees: x.assignees, gedeUrl: x.gedeUrl, dueDate: x.dueDate, note: x.notes, archivedAt: now().slice(0, 10) };
-      return { ...x, revision: s.rev, status: s.status, assignees: s.assignees.length ? s.assignees : x.assignees, gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, history: [...hist.filter((h) => h !== s), cur] };
+      const selected = selectRevision(x, activeRevisions[id]);
+      return updateRevision(x, { ...selected, qualityRework: selected.qualityRework ? 0 : 1 });
     })),
-    toggleQualityRework: (id) => setTasks((ts) => ts.map((x) => (x.id === id ? { ...x, qualityRework: x.qualityRework ? 0 : 1 } : x))),
     addProject: (p) => setProjects((ps) => (ps.some((x) => x.code === p.code) ? ps : [...ps, p])),
     addCompany: (name) => {
       const existing = companies.find((c) => c.name.toLowerCase() === name.toLowerCase());

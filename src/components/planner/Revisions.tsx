@@ -36,7 +36,7 @@ export function RevisionSelect({ task }: { task: Task }) {
           <DropdownMenuItem key={h.rev + h.archivedAt} onSelect={() => swapRevision(task.id, h.rev)} className="gap-2">
             <span className={cn("h-2 w-2 rounded-full", STATUS_STYLE[h.status].dot)} />
             <span>Rev. {h.rev}</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{fmtDate(h.archivedAt)} · {h.status}</span>
+            <span className="ml-auto text-[11px] text-muted-foreground">{h.archivedAt ? fmtDate(h.archivedAt) : "Mais recente"} · {h.status}</span>
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
@@ -91,7 +91,7 @@ export function NewRevisionDialog({ task, onClose }: { task: Task | null; onClos
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button disabled={!rev.trim()} onClick={() => { if (task) newRevision(task.id, { rev: rev.trim(), status: "Elaboração", gedeUrl: gede, dueDate: due, note }); onClose(); }}>Criar Revisão</Button>
+          <Button disabled={!rev.trim() || (!!task && (rev.trim() === revOf(task) || task.history?.some((h) => h.rev === rev.trim())))} onClick={() => { if (task) { newRevision(task.id, { rev: rev.trim(), status: "Elaboração", gedeUrl: gede, dueDate: due, note }); } onClose(); }}>Criar Revisão</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

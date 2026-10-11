@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep stored document revisions canonical and project the selected revision through a separate active-ID map; selection must never rewrite revision payloads.
+- Route all revision edits through the task provider's revision-aware update helpers so historical edits cannot overwrite the latest version.
