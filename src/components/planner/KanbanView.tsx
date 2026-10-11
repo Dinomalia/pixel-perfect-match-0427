@@ -58,26 +58,26 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
               const hist = t.history ?? [];
               const n = hist.length;
               const back = hist[n - 1];
+               const layers = hist.slice(-2);
               const qr = !!t.qualityRework;
               return (
-              <div key={t.id} className="relative" style={{ paddingTop: n >= 2 ? 30 : n === 1 ? 22 : 0 }}>
-                {n >= 2 && <div aria-hidden className="absolute left-0 right-3 top-0 h-16 rounded-lg border border-border bg-card/50 shadow-card" />}
-                {back && (
-                  <button type="button" title={`Clique para trazer a Rev. ${back.rev} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }}
-                    className={cn("absolute left-0 right-0 h-16 overflow-hidden rounded-lg border border-border border-l-4 bg-card px-3 pt-2.5 text-left shadow-card transition hover:bg-card", STATUS_STYLE[back.status].border)} style={{ top: n >= 2 ? 6 : 0 }}>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{companyOf(t.projectCode)?.name} • {t.projectCode}</p>
+               <div key={t.id} data-task-id={t.id} className={cn("relative isolate", layers.length === 2 ? "pt-20" : layers.length === 1 ? "pt-10" : "pt-0")}>
+                 {layers.map((layer, index) => (
+                   <Button key={layer.rev} type="button" variant="ghost" title={`Trazer a Rev. ${layer.rev} para frente`} aria-label={`Trazer a Rev. ${layer.rev} de ${t.title} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, layer.rev); }}
+                     className={cn("absolute left-0 right-0 block h-20 w-full overflow-hidden rounded-lg border border-border border-l-4 bg-card px-3 pt-2.5 pb-0 text-left shadow-card hover:bg-accent", index === 0 ? "top-0 z-[1]" : "top-10 z-[2]", STATUS_STYLE[layer.status].border)}>
+                     <div className="flex h-5 items-center justify-between gap-1">
+                       <p className="min-w-0 truncate text-[11px] font-medium uppercase text-muted-foreground" title={`${companyOf(layer.projectCode ?? t.projectCode)?.name} • ${layer.projectCode ?? t.projectCode}`}>{companyOf(layer.projectCode ?? t.projectCode)?.name} • {layer.projectCode ?? t.projectCode}</p>
                       <div className="flex items-center gap-1">
-                        <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">Rev. {back.rev}</span>
-                        <DocTypeBadge type={t.docType} />
+                         <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">Rev. {layer.rev}</span>
+                         <DocTypeBadge type={layer.docType ?? t.docType} />
                       </div>
                     </div>
-                  </button>
-                )}
+                   </Button>
+                 ))}
               <ContextMenu>
               <ContextMenuTrigger asChild>
               <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)} onClick={() => onEdit(t)}
-                className={cn("relative cursor-grab space-y-2 rounded-lg border border-border border-l-4 bg-card p-3 shadow-card transition hover:shadow-card-hover active:cursor-grabbing", STATUS_STYLE[t.status].border)}>
+                 className={cn("relative z-10 cursor-grab space-y-2 rounded-lg border border-border border-l-4 bg-card p-3 shadow-card transition hover:shadow-card-hover active:cursor-grabbing", STATUS_STYLE[t.status].border)}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{companyOf(t.projectCode)?.name} • {t.projectCode}</p>
                   <div className="flex items-center gap-1">
@@ -103,7 +103,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                     <Avatars ids={t.assignees} />
                   </div>
                 </div>
-                {back && <button type="button" onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }} className="text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline">🗂 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"}</button>}
+                 {back && <Button type="button" variant="link" onClick={(e) => { e.stopPropagation(); swapRevision(t.id, back.rev); }} className="h-auto p-0 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline">🗂 {n} revis{n === 1 ? "ão anterior" : "ões anteriores"}</Button>}
               </article>
               </ContextMenuTrigger>
               <ContextMenuContent>
