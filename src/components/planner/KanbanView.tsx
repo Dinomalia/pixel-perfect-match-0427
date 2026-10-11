@@ -64,8 +64,8 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                <div key={t.id} data-task-id={t.id} className={cn("relative isolate", layers.length === 2 ? "pt-20" : layers.length === 1 ? "pt-10" : "pt-0")}>
                  {layers.map((layer, index) => (
                    <Button key={layer.rev} type="button" variant="ghost" title={`Trazer a Rev. ${layer.rev} para frente`} aria-label={`Trazer a Rev. ${layer.rev} de ${t.title} para frente`} onClick={(e) => { e.stopPropagation(); swapRevision(t.id, layer.rev); }}
-                     className={cn("absolute left-0 right-0 block h-20 w-full overflow-hidden rounded-lg border border-border border-l-4 bg-card px-3 pt-2.5 pb-0 text-left shadow-card hover:bg-accent", index === 0 ? "top-0 z-[1]" : "top-10 z-[2]", STATUS_STYLE[layer.status].border)}>
-                     <div className="flex h-5 items-center justify-between gap-1">
+                     className={cn("absolute left-0 right-0 flex h-10 w-full items-start justify-start overflow-hidden rounded-t-lg rounded-b-none border border-border border-l-4 bg-card px-3 pt-2.5 pb-0 text-left shadow-card hover:bg-accent", index === 0 ? "top-0 z-[1]" : "top-10 z-[2]", STATUS_STYLE[layer.status].border)}>
+                     <div className="flex h-5 w-full items-center justify-between gap-1">
                        <p className="min-w-0 truncate text-[11px] font-medium uppercase text-muted-foreground" title={`${companyOf(layer.projectCode ?? t.projectCode)?.name} • ${layer.projectCode ?? t.projectCode}`}>{companyOf(layer.projectCode ?? t.projectCode)?.name} • {layer.projectCode ?? t.projectCode}</p>
                       <div className="flex items-center gap-1">
                          <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">Rev. {layer.rev}</span>
