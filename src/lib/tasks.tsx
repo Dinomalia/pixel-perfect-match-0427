@@ -30,15 +30,15 @@ export type Task = {
   notes: string;
   revision?: string;
   activeRevisionId?: string;
-  history?: RevisionSnapshot[];
+  history?: RevisionSnapshot[] | undefined;
   deletedAt?: string | undefined;
-  qualityRework?: number;
-  qualityReworkNote?: string;
-  folderPath?: string;
+  qualityRework?: number | undefined;
+  qualityReworkNote?: string | undefined;
+  folderPath?: string | undefined;
 };
 export type TrashRevision = { id: string; taskId: string; taskTitle: string; snap: RevisionSnapshot; wasCurrent: boolean; deletedAt: string };
 export type TrashItem = { kind: "card"; id: string; title: string; rev: string; status: Status; deletedAt: string } | ({ kind: "revision" } & TrashRevision);
-export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string; title?: string; projectCode?: string; docType?: string; priority?: Priority; folderPath?: string; qualityRework?: number; qualityReworkNote?: string };
+export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string; title?: string; projectCode?: string; docType?: string; priority?: Priority; folderPath?: string | undefined; qualityRework?: number | undefined; qualityReworkNote?: string | undefined };
 export type NewRevisionInput = { rev: string; status: Status; gedeUrl: string; note: string; dueDate: string };
 
 export const isNetPath = (v: string) => /^([a-zA-Z]:[\\/]|\\\\)/.test(v.trim());
@@ -290,12 +290,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       setUndoStack((u) => [...u, { kind: "card", id, title: x.title, rev: revOf(x), status: x.status, deletedAt: d }]);
     },
     moveTask: (id, status) => setTasks((ts) => ts.map((x) => x.id === id ? updateRevision(x, { ...selectRevision(x, activeRevisions[id]), status }) : x)),
-    newRevision: (id, i) => setTasks((ts) => ts.map((x) => {
+    newRevision: (id, i) => {
+      const existing = allTasks.find((x) => x.id === id);
+      if (!existing || i.rev === revOf(existing) || existing.history?.some((h) => h.rev === i.rev)) return;
+      setActiveRevisions((a) => ({ ...a, [id]: i.rev }));
+      setTasks((ts) => ts.map((x) => {
       if (x.id !== id) return x;
       if (i.rev === revOf(x) || x.history?.some((h) => h.rev === i.rev)) return x;
       const snap = snapshotOf(x, new Date().toISOString().slice(0, 10));
       return { ...x, revision: i.rev, status: i.status, gedeUrl: i.gedeUrl, dueDate: i.dueDate, notes: i.note, history: [...(x.history ?? []), snap] };
-    })),
+      }));
+    },
     swapRevision: (id, rev) => {
       const task = allTasks.find((x) => x.id === id);
       if (!task || (rev !== revOf(task) && !task.history?.some((h) => h.rev === rev))) return;
