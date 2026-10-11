@@ -95,7 +95,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                   </div>
                   <PriorityBadge priority={t.priority} />
                 </div>
-                <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
                   <div className="flex items-center gap-1.5"><GedeLink url={t.gedeUrl} /><FolderCopy path={t.folderPath} /><DueDate task={t} /></div>
                   <div className="flex items-center gap-1">
                     <Button size="icon" variant="ghost" className={cn("h-7 w-7", qr && "bg-status-rework/15 text-status-rework")} title={qr ? "Remover Retrabalho Qualidade" : "Registrar Retrabalho Qualidade"} aria-label="Registrar Retrabalho Qualidade" aria-pressed={qr} onClick={(e) => { e.stopPropagation(); toggleQualityRework(t.id); }}><ShieldAlert className="h-3.5 w-3.5" /></Button>
