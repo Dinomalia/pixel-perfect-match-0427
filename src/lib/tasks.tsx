@@ -166,6 +166,8 @@ type Ctx = {
   addProject: (p: Project) => void;
   addCompany: (name: string) => string;
   companyOf: (projectCode: string) => Company | undefined;
+  people: Person[];
+  addPerson: (name: string, role: string) => Person;
 };
 
 const TasksContext = createContext<Ctx | null>(null);
@@ -330,7 +332,9 @@ export function useTasks() {
   return c;
 }
 
-export const personById = (id: string) => PEOPLE.find((p) => p.id === id);
+let peopleState = PEOPLE;
+export const registerPeople = (ps: Person[]) => { peopleState = ps; };
+export const personById = (id: string) => peopleState.find((p) => p.id === id);
 export const initials = (name: string) => name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 export const fmtDate = (d: string) => (d ? d.split("-").reverse().join("/") : "—");
 export const docLabel = (code: string) => DEFAULT_DOC_TYPES.find((d) => d.code === code)?.label ?? "Tipo customizado";
