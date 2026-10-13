@@ -48,7 +48,7 @@ export function FolderCopy({ path }: { path?: string | undefined }) {
   if (!path) return null;
   return (
     <button type="button" title={`Copiar caminho da pasta: ${path}`} aria-label="Copiar caminho da pasta" onClick={(e) => { e.stopPropagation(); copyPath(path); }}
-      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-primary transition-colors hover:bg-accent"><FolderOpen className="h-3 w-3" /></button>
+      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent"><FolderOpen className="h-3 w-3" />Pasta</button>
   );
 }
 
@@ -58,7 +58,7 @@ export function GedeLink({ url }: { url: string }) {
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
       className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent">
-      <ExternalLink className="h-3 w-3" /> GEDE
+      <ExternalLink className="h-3 w-3" /> GED
     </a>
   );
 }

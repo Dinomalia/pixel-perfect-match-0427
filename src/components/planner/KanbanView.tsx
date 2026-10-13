@@ -36,13 +36,13 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="kanban-scroll flex h-[calc(100vh-240px)] min-h-[480px] gap-4 overflow-x-auto overflow-y-hidden pb-2">
       {cols.map((c) => (
         <section key={c.key}
           onDragOver={(e) => { e.preventDefault(); setOver(c.key); }}
           onDragLeave={() => setOver(null)}
           onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) drop(id, c.key); setOver(null); }}
-          className={cn("flex min-h-[60vh] w-[300px] shrink-0 flex-col rounded-xl border border-border bg-muted/60 p-3 transition-colors", over === c.key && "border-primary bg-accent")}>
+          className={cn("flex h-full w-[300px] shrink-0 flex-col rounded-xl border border-border bg-muted/60 p-3 transition-colors", over === c.key && "border-primary bg-accent")}>
           <header className="mb-3 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               {c.dot && <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", c.dot)} />}
@@ -55,7 +55,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
             </div>
             {groupBy === "status" && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onNew(c.key as Status)} aria-label={`Novo documento em ${c.title}`}><Plus className="h-4 w-4" /></Button>}
           </header>
-          <div className="flex flex-1 flex-col gap-2.5">
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
             {c.items.map((t) => {
               const hist = t.history ?? [];
               const n = hist.length;
