@@ -71,6 +71,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                        <p className="min-w-0 truncate text-[11px] font-medium uppercase text-muted-foreground" title={`${companyOf(layer.projectCode ?? t.projectCode)?.name} • ${layer.projectCode ?? t.projectCode}`}>{companyOf(layer.projectCode ?? t.projectCode)?.name} • {layer.projectCode ?? t.projectCode}</p>
                       <div className="flex items-center gap-1">
                          <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">Rev. {layer.rev}</span>
+                         {layer.folderPath && <FolderCopy path={layer.folderPath} />}
                          <DocTypeBadge type={layer.docType ?? t.docType} />
                       </div>
                     </div>
