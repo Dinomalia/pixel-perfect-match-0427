@@ -16,7 +16,7 @@ import { PEOPLE, PRIORITIES, STATUSES, docLabel, initials, isNetPath, useTasks, 
 const schema = z.object({
   title: z.string().trim().min(1, "Informe o título").max(150),
   docType: z.string().trim().min(1, "Selecione o tipo de documento").max(10, "Tipo com até 10 caracteres"),
-  gedeUrl: z.string().trim().max(500).refine((v) => !v || isNetPath(v) || /^https?:\/\//i.test(v), "Link GEDE inválido (use http(s):// ou caminho de rede)"),
+  gedeUrl: z.string().trim().max(500).refine((v) => !v || isNetPath(v) || /^https?:\/\//i.test(v), "Link GED inválido (use http(s):// ou caminho de rede)"),
   assignees: z.array(z.string()).min(1, "Selecione ao menos um responsável"),
   dueDate: z.string().min(1, "Informe o prazo"),
   notes: z.string().max(2000),
@@ -137,7 +137,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
               <SelectContent>{PRIORITIES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2 space-y-1.5"><Label>Link GED/GEDE</Label><Input placeholder="https://... ou Z:\\..." value={form.gedeUrl} onChange={(e) => set("gedeUrl", e.target.value)} /></div>
+          <div className="sm:col-span-2 space-y-1.5"><Label>Link GED</Label><Input placeholder="https://... ou Z:\\..." value={form.gedeUrl} onChange={(e) => set("gedeUrl", e.target.value)} /></div>
           <div className="sm:col-span-2 space-y-1.5"><Label>Caminho da pasta (rede)</Label><div className="flex gap-2"><Input className="font-mono text-xs" placeholder="Z:\\Projetos\\..." value={form.folderPath ?? ""} onChange={(e) => set("folderPath", e.target.value)} /><Button type="button" variant="outline" size="icon" aria-label="Copiar caminho" disabled={!(form.folderPath || (isNetPath(form.gedeUrl) && form.gedeUrl))} onClick={() => copyPath(form.folderPath || form.gedeUrl)}><Copy className="h-4 w-4" /></Button></div></div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label>Colaboradores</Label>

@@ -67,7 +67,7 @@ export function SnapshotDialog({ task, snap, onClose }: { task: Task | null; sna
               <dt className="text-muted-foreground">Status final</dt><dd><StatusBadge status={snap.status} /></dd>
               <dt className="text-muted-foreground">Responsáveis</dt><dd>{snap.assignees.map((a) => personById(a)?.name).join(", ") || "—"}</dd>
               <dt className="text-muted-foreground">Prazo</dt><dd>{fmtDate(snap.dueDate)}</dd>
-              <dt className="text-muted-foreground">GEDE</dt><dd>{snap.gedeUrl ? <a className="text-primary underline" href={snap.gedeUrl} target="_blank" rel="noopener noreferrer">Abrir</a> : "—"}</dd>
+              <dt className="text-muted-foreground">GED</dt><dd>{snap.gedeUrl ? <a className="text-primary underline" href={snap.gedeUrl} target="_blank" rel="noopener noreferrer">Abrir</a> : "—"}</dd>
               <dt className="text-muted-foreground">Nota</dt><dd>{snap.note || "—"}</dd>
             </dl>
           </>
@@ -92,7 +92,7 @@ export function NewRevisionDialog({ task, onClose }: { task: Task | null; onClos
         {task && <p className="text-sm text-muted-foreground">{task.title} · Rev. {revOf(task)} será arquivada e a nova começa em <b>Elaboração</b>.</p>}
         <div className="grid gap-3">
           <label className="grid gap-1 text-sm">Revisão<Input value={rev} onChange={(e) => setRev(e.target.value.toUpperCase())} /></label>
-          <label className="grid gap-1 text-sm">Link GEDE<Input value={gede} onChange={(e) => setGede(e.target.value)} /></label>
+          <label className="grid gap-1 text-sm">Link GED<Input value={gede} onChange={(e) => setGede(e.target.value)} /></label>
           <label className="grid gap-1 text-sm">Prazo<Input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></label>
           <label className="grid gap-1 text-sm">Motivo / nota<Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: atender comentários do cliente" /></label>
         </div>
