@@ -53,7 +53,7 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
-            <tr><th className="px-4 py-3 uppercase">Tipo</th><th className="px-4 py-3 uppercase">Empresa</th><H k="projectCode">Código</H><H k="project">Projeto</H><H k="title">Documento</H><H k="person">Responsável</H><H k="dueDate">Prazo</H><H k="status">Status</H><th className="px-4 py-3 uppercase">Prioridade</th><th className="px-4 py-3 uppercase">GEDE</th></tr>
+            <tr><th className="px-4 py-3 uppercase">Tipo</th><th className="px-4 py-3 uppercase">Empresa</th><H k="projectCode">Código</H><H k="project">Projeto</H><H k="title">Documento</H><H k="person">Responsável</H><H k="dueDate">Prazo</H><H k="status">Status</H><th className="px-4 py-3 uppercase">Prioridade</th><th className="px-4 py-3 uppercase">GED</th></tr>
           </thead>
           <tbody>
             {slice.map((t) => (

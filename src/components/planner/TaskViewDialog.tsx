@@ -27,7 +27,7 @@ export function TaskViewDialog({ task, onClose, onEdit }: { task: Task | null; o
           <Row label="Disciplina"><span className="inline-flex items-center gap-2"><DocTypeBadge type={task.docType} />{docLabel(task.docType)}</span></Row>
           <Row label="Status"><StatusBadge status={task.status} /></Row>
           <Row label="Responsáveis">{task.assignees.map((a) => personById(a)?.name).filter(Boolean).join(", ") || "—"}</Row>
-          <Row label="GEDE">{task.gedeUrl ? <span className="flex items-center gap-2"><GedeLink url={task.gedeUrl} /><span className="break-all text-xs text-muted-foreground">{task.gedeUrl}</span></span> : "—"}</Row>
+          <Row label="GED">{task.gedeUrl ? <span className="flex items-center gap-2"><GedeLink url={task.gedeUrl} /><span className="break-all text-xs text-muted-foreground">{task.gedeUrl}</span></span> : "—"}</Row>
           <Row label="Caminho">{task.folderPath ? <span className="flex items-center gap-2"><FolderCopy path={task.folderPath} /><code className="break-all text-xs">{task.folderPath}</code></span> : "—"}</Row>
         </div>
       </DialogContent>
