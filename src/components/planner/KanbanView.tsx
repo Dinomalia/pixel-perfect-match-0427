@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PEOPLE, STATUSES, STATUS_STYLE, initials, revOf, useTasks, type Status, type Task } from "@/lib/tasks";
 import { Avatars, DocTypeBadge, DueDate, FolderCopy, GedeLink, PriorityBadge, StatusSelect } from "./Shared";
+import { TaskViewDialog } from "./TaskViewDialog";
 import { NewRevisionDialog, RevisionSelect, confirmDeleteRevision } from "./Revisions";
 
 export type GroupBy = "status" | "person" | "project";
@@ -14,6 +15,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
   const { filtered, companyOf, moveTask, upsertTask, projects, swapRevision, deleteRevision, toggleQualityRework } = useTasks();
   const [over, setOver] = useState<string | null>(null);
   const [revTask, setRevTask] = useState<Task | null>(null);
+  const [viewTask, setViewTask] = useState<Task | null>(null);
 
   let cols: Col[];
   if (groupBy === "status") {
@@ -76,7 +78,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                  ))}
               <ContextMenu>
               <ContextMenuTrigger asChild>
-              <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)} onClick={() => onEdit(t)}
+              <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)} onClick={() => setViewTask(t)}
                  className={cn("relative z-10 cursor-grab space-y-2 rounded-lg border border-border border-l-4 bg-card p-3 shadow-card transition hover:shadow-card-hover active:cursor-grabbing", STATUS_STYLE[t.status].border)}>
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{companyOf(t.projectCode)?.name} • {t.projectCode}</p>
@@ -119,6 +121,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
           </div>
         </section>
       ))}
+      <TaskViewDialog task={viewTask} onClose={() => setViewTask(null)} onEdit={onEdit} />
       <NewRevisionDialog task={revTask} onClose={() => setRevTask(null)} />
     </div>
   );
