@@ -181,6 +181,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const tasks = useMemo(() => allTasks.filter((t) => !t.deletedAt).map((t) => selectRevision(t, activeRevisions[t.id])), [allTasks, activeRevisions]);
   const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
   const [companies, setCompanies] = useState<Company[]>(SEED_COMPANIES);
+  const [people, setPeople] = useState<Person[]>(PEOPLE);
+  registerPeople(people);
   const [loaded, setLoaded] = useState(false);
   const [filters, setF] = useState<Filters>({ search: "", company: "all", project: "all", person: "all", docType: "all" });
 
@@ -193,13 +195,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (Array.isArray(d.projects)) setProjects(d.projects);
         if (Array.isArray(d.companies)) setCompanies(d.companies);
         if (Array.isArray(d.revTrash)) setRevTrash(d.revTrash);
+        if (Array.isArray(d.people)) setPeople(d.people);
       }
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash }));
-  }, [allTasks, projects, companies, revTrash, loaded]);
+    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash, people }));
+  }, [allTasks, projects, companies, revTrash, people, loaded]);
 
   const companyOf = (code: string) => {
     const p = projects.find((x) => x.code === code);
@@ -320,6 +323,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const id = `c${Date.now()}`;
       setCompanies((cs) => [...cs, { id, name }]);
       return id;
+    },
+    people,
+    addPerson: (name, role) => {
+      const p: Person = { id: `p${Date.now()}`, name: name.trim(), role: role.trim(), email: "" };
+      setPeople((ps) => [...ps, p]);
+      return p;
     },
   };
   undoRef.current = value._undoImpl;

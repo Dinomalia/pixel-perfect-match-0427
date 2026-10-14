@@ -75,6 +75,11 @@ export function DashboardView() {
     { title: "Por empresa / cliente", rows: seg((t) => (companyOf(t.projectCode)?.name ?? "—").toUpperCase()) },
     { title: "Por tipo / disciplina", rows: seg((t) => `[${t.docType || "—"}]`) },
   ];
+  const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const monthMap = new Map<string, number>();
+  qr.forEach((t) => { const k = (t.dueDate || "").slice(0, 7); if (k) monthMap.set(k, (monthMap.get(k) ?? 0) + 1); });
+  const qrByMonth = [...monthMap.entries()].sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, value]) => ({ name: `${MESES[Number(k.slice(5, 7)) - 1]}/${k.slice(2, 4)}`, value }));
   const byPerson = PEOPLE.map((p) => ({ name: p.name.split(" ")[0], value: filtered.filter((t) => t.assignees.includes(p.id)).length })).sort((a, b) => b.value - a.value);
   const byType = docTypes.map((d) => {
     const ts = filtered.filter((t) => t.docType === d);
@@ -132,6 +137,19 @@ export function DashboardView() {
           </ResponsiveContainer>
         </Panel>
       </div>
+      <Panel title="Retrabalho Qualidade por mês (todos os colaboradores)">
+        {qrByMonth.length === 0 ? <p className="text-xs text-muted-foreground">Nenhum documento marcado como Retrabalho Qualidade</p> : (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={qrByMonth}>
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
+              <Tooltip {...tip} cursor={{ fill: "var(--muted)" }} />
+              <Bar dataKey="value" name="Documentos" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Panel>
       <Panel title={`Retrabalho Qualidade · ${qr.length} documento(s)`}>
         <div className="grid gap-4 md:grid-cols-3">
           {qrSegs.map((g) => (
