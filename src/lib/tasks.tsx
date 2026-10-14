@@ -35,20 +35,23 @@ export type Task = {
   qualityRework?: number | undefined;
   qualityReworkNote?: string | undefined;
   folderPath?: string | undefined;
+  checklist?: ChecklistItem[] | undefined;
+  showChecklistOnCard?: boolean | undefined;
 };
+export type ChecklistItem = { id: string; text: string; done: boolean };
 export type TrashRevision = { id: string; taskId: string; taskTitle: string; snap: RevisionSnapshot; wasCurrent: boolean; deletedAt: string };
 export type TrashItem = { kind: "card"; id: string; title: string; rev: string; status: Status; deletedAt: string } | ({ kind: "revision" } & TrashRevision);
-export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string; title?: string; projectCode?: string; docType?: string; priority?: Priority; folderPath?: string | undefined; qualityRework?: number | undefined; qualityReworkNote?: string | undefined };
+export type RevisionSnapshot = { rev: string; status: Status; assignees: string[]; gedeUrl: string; dueDate: string; note: string; archivedAt: string; title?: string; projectCode?: string; docType?: string; priority?: Priority; folderPath?: string | undefined; qualityRework?: number | undefined; qualityReworkNote?: string | undefined; checklist?: ChecklistItem[] | undefined; showChecklistOnCard?: boolean | undefined };
 export type NewRevisionInput = { rev: string; status: Status; gedeUrl: string; note: string; dueDate: string };
 
 export const isNetPath = (v: string) => /^([a-zA-Z]:[\\/]|\\\\)/.test(v.trim());
 export const revOf = (t: Task) => t.revision || "0";
 export function snapshotOf(t: Task, archivedAt: string): RevisionSnapshot {
-  return { rev: revOf(t), status: t.status, assignees: [...t.assignees], gedeUrl: t.gedeUrl, dueDate: t.dueDate, note: t.notes, archivedAt, title: t.title, projectCode: t.projectCode, docType: t.docType, priority: t.priority, folderPath: t.folderPath, qualityRework: t.qualityRework, qualityReworkNote: t.qualityReworkNote };
+  return { rev: revOf(t), status: t.status, assignees: [...t.assignees], gedeUrl: t.gedeUrl, dueDate: t.dueDate, note: t.notes, archivedAt, title: t.title, projectCode: t.projectCode, docType: t.docType, priority: t.priority, folderPath: t.folderPath, qualityRework: t.qualityRework, qualityReworkNote: t.qualityReworkNote, checklist: t.checklist?.map((c) => ({ ...c })), showChecklistOnCard: t.showChecklistOnCard };
 }
 
 function applySnapshot(t: Task, s: RevisionSnapshot): Task {
-  return { ...t, revision: s.rev, status: s.status, assignees: [...s.assignees], gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, title: s.title ?? t.title, projectCode: s.projectCode ?? t.projectCode, docType: s.docType ?? t.docType, priority: s.priority ?? t.priority, folderPath: s.folderPath, qualityRework: s.qualityRework, qualityReworkNote: s.qualityReworkNote };
+  return { ...t, revision: s.rev, status: s.status, assignees: [...s.assignees], gedeUrl: s.gedeUrl, dueDate: s.dueDate, notes: s.note, title: s.title ?? t.title, projectCode: s.projectCode ?? t.projectCode, docType: s.docType ?? t.docType, priority: s.priority ?? t.priority, folderPath: s.folderPath, qualityRework: s.qualityRework, qualityReworkNote: s.qualityReworkNote, checklist: s.checklist?.map((c) => ({ ...c })), showChecklistOnCard: s.showChecklistOnCard };
 }
 
 export function selectRevision(t: Task, rev?: string): Task {
@@ -163,6 +166,7 @@ type Ctx = {
   newRevision: (id: string, input: NewRevisionInput) => void;
   swapRevision: (id: string, rev: string) => void;
   toggleQualityRework: (id: string) => void;
+  updateChecklist: (id: string, fn: (t: Task) => Partial<Pick<Task, "checklist" | "showChecklistOnCard">>) => void;
   addProject: (p: Project) => void;
   addCompany: (name: string) => string;
   companyOf: (projectCode: string) => Company | undefined;
@@ -303,7 +307,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       if (x.id !== id) return x;
       if (i.rev === revOf(x) || x.history?.some((h) => h.rev === i.rev)) return x;
       const snap = snapshotOf(x, new Date().toISOString().slice(0, 10));
-      return { ...x, revision: i.rev, status: i.status, gedeUrl: i.gedeUrl, dueDate: i.dueDate, notes: i.note, history: [...(x.history ?? []), snap] };
+      return { ...x, revision: i.rev, status: i.status, gedeUrl: i.gedeUrl, dueDate: i.dueDate, notes: i.note, checklist: [], history: [...(x.history ?? []), snap] };
       }));
     },
     swapRevision: (id, rev) => {
@@ -315,6 +319,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       if (x.id !== id) return x;
       const selected = selectRevision(x, activeRevisions[id]);
       return updateRevision(x, { ...selected, qualityRework: selected.qualityRework ? 0 : 1 });
+    })),
+    updateChecklist: (id, fn) => setTasks((ts) => ts.map((x) => {
+      if (x.id !== id) return x;
+      const selected = selectRevision(x, activeRevisions[id]);
+      return updateRevision(x, { ...selected, ...fn(selected) });
     })),
     addProject: (p) => setProjects((ps) => (ps.some((x) => x.code === p.code) ? ps : [...ps, p])),
     addCompany: (name) => {
