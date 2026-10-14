@@ -4,6 +4,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PEOPLE, STATUSES, STATUS_STYLE, initials, revOf, useTasks, type Status, type Task } from "@/lib/tasks";
+import { CardChecklist } from "./Checklist";
 import { Avatars, DocTypeBadge, DueDate, FolderCopy, GedeLink, PriorityBadge, StatusSelect } from "./Shared";
 import { TaskViewDialog } from "./TaskViewDialog";
 import { NewRevisionDialog, RevisionSelect, confirmDeleteRevision } from "./Revisions";
@@ -98,6 +99,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
                   </div>
                   <PriorityBadge priority={t.priority} />
                 </div>
+                <CardChecklist task={t} />
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
                   <div className="flex items-center gap-1.5"><GedeLink url={t.gedeUrl} /><FolderCopy path={t.folderPath} /><DueDate task={t} /></div>
                   <div className="flex items-center gap-1">

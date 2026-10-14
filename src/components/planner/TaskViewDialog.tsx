@@ -2,11 +2,13 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { docLabel, personById, revOf, useTasks, type Task } from "@/lib/tasks";
+import { ChecklistEditor } from "./Checklist";
 import { DocTypeBadge, FolderCopy, GedeLink, StatusBadge } from "./Shared";
 
-export function TaskViewDialog({ task, onClose, onEdit }: { task: Task | null; onClose: () => void; onEdit: (t: Task) => void }) {
-  const { companyOf, projects } = useTasks();
-  if (!task) return null;
+export function TaskViewDialog({ task: initial, onClose, onEdit }: { task: Task | null; onClose: () => void; onEdit: (t: Task) => void }) {
+  const { companyOf, projects, tasks } = useTasks();
+  if (!initial) return null;
+  const task = tasks.find((x) => x.id === initial.id) ?? initial;
   const project = projects.find((p) => p.code === task.projectCode);
   const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div className="grid grid-cols-[120px_1fr] items-start gap-3 py-2 border-b border-border last:border-0">
@@ -30,6 +32,7 @@ export function TaskViewDialog({ task, onClose, onEdit }: { task: Task | null; o
           <Row label="GED">{task.gedeUrl ? <span className="flex items-center gap-2"><GedeLink url={task.gedeUrl} /><span className="break-all text-xs text-muted-foreground">{task.gedeUrl}</span></span> : "—"}</Row>
           <Row label="Caminho">{task.folderPath ? <span className="flex items-center gap-2"><FolderCopy path={task.folderPath} /><code className="break-all text-xs">{task.folderPath}</code></span> : "—"}</Row>
         </div>
+        <div className="border-t border-border pt-3"><ChecklistEditor task={task} /></div>
       </DialogContent>
     </Dialog>
   );
