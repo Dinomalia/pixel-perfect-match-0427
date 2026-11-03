@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, CalendarDays, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { TimelineView } from "@/components/planner/Timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/")({
   ),
 });
 
-type View = "home" | "kanban" | "dashboard" | "table" | "trash";
+type View = "home" | "kanban" | "dashboard" | "table" | "timeline" | "trash";
 
 function App() {
   const { filters, setFilters, projects, companies, docTypes, trash } = useTasks();
@@ -60,6 +61,7 @@ function App() {
               <TabsTrigger value="kanban" className="nav-tab"><KanbanSquare className="mr-1.5 h-4 w-4" />Kanban</TabsTrigger>
               <TabsTrigger value="dashboard" className="nav-tab"><BarChart3 className="mr-1.5 h-4 w-4" />Dashboard</TabsTrigger>
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
+              <TabsTrigger value="timeline" className="nav-tab"><CalendarDays className="mr-1.5 h-4 w-4" />Cronograma</TabsTrigger>
               <TabsTrigger value="trash" className="nav-tab"><Trash2 className="mr-1.5 h-4 w-4" />Lixeira{trash.length > 0 && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{trash.length}</span>}</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -114,6 +116,7 @@ function App() {
         )}
         {view === "dashboard" && <DashboardView />}
         {view === "table" && <TableView onEdit={openEdit} />}
+        {view === "timeline" && <TimelineView onEdit={openEdit} />}
         {view === "trash" && <TrashView />}
       </main>
       <TaskDialog open={open} onOpenChange={setOpen} task={editing} defaultStatus={defStatus} />
