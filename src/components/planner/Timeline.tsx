@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { initials, fmtDate, STATUS_STYLE, STATUSES, useTasks, type Task } from "@/lib/tasks";
-import { dateKey, deliveriesBetween, deliveryAlert, personalDeliveries, weekStart } from "@/lib/timeline";
-import { DocTypeBadge, StatusBadge } from "./Shared";
+import { allocationConflicts, dateKey, deliveryAlert, ganttStart, personalDeliveries, taskProgress, weekStart } from "@/lib/timeline";
+import { StatusBadge } from "./Shared";
 import { TaskViewDialog } from "./TaskViewDialog";
 
 function useToday() {
@@ -22,73 +20,79 @@ function useToday() {
   return today;
 }
 
-function DeliverySummary({ task, onDetails }: { task: Task; onDetails: () => void }) {
-  const { companyOf, people } = useTasks();
-  return <div className="space-y-3">
-    <p className="text-xs text-muted-foreground">{companyOf(task.projectCode)?.name} · {task.projectCode}</p>
-    <p className="break-words text-sm font-semibold">{task.title}</p>
-    <div className="flex flex-wrap gap-2"><DocTypeBadge type={task.docType} /><StatusBadge status={task.status} /></div>
-    <p className="text-xs">Entrega: <b>{fmtDate(task.dueDate)}</b></p>
-    <p className="text-xs text-muted-foreground">{task.assignees.map((id) => people.find((p) => p.id === id)?.name).filter(Boolean).join(", ") || "Sem responsável"}</p>
-    {Boolean(task.qualityRework) && <p className="flex items-center gap-1 text-xs font-medium text-status-rework"><AlertTriangle className="size-3.5" />Retrabalho Qualidade</p>}
-    <Button size="sm" variant="outline" onClick={onDetails}><ExternalLink />Abrir detalhes</Button>
-  </div>;
-}
-
 export function TimelineView({ onEdit }: { onEdit: (task: Task) => void }) {
-  const { filtered, people } = useTasks();
+  const { filtered, people, projects, companyOf } = useTasks();
   const today = useToday();
   const [offset, setOffset] = useState(0);
-  const [days, setDays] = useState(7);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [detail, setDetail] = useState<Task | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
   if (!today) return <p className="py-8 text-sm text-muted-foreground">Carregando cronograma…</p>;
-  const start = addDays(weekStart(today), offset);
+  const days = 42, dayWidth = 28, rowH = 44;
+  const start = addDays(weekStart(today), offset - 7);
   const dates = Array.from({ length: days }, (_, i) => addDays(start, i));
-  const visible = deliveriesBetween(filtered, start, days);
-  const rows = [...people.map((person) => ({ ...person, tasks: visible.filter((task) => task.assignees.includes(person.id)) })),
-    { id: "unassigned", name: "Sem responsável", role: "", email: "", tasks: visible.filter((task) => task.assignees.length === 0) }];
-  const dayWidth = days === 7 ? 144 : 112;
-  return <section className="space-y-4" aria-label="Cronograma da equipe">
+  const live = filtered.filter((t) => !t.deletedAt);
+  const nameOf = (id: string) => people.find((p) => p.id === id)?.name;
+  const conflicts = allocationConflicts(live, nameOf);
+  const groups = [...new Set(live.map((t) => t.projectCode))].sort().map((code) => ({ code, tasks: live.filter((t) => t.projectCode === code).sort((x, y) => x.dueDate.localeCompare(y.dueDate)) }));
+  const docCode = (t: Task, list: Task[]) => `${t.projectCode}-${t.docType}-${String(list.filter((x) => x.docType === t.docType).indexOf(t) + 1).padStart(3, "0")}`;
+  const barColor: Record<string, string> = { "Elaboração": "bg-status-draft", Qualidade: "bg-status-quality", Retrabalho: "bg-status-rework", "Em Aprovação": "bg-status-pending", Aprovado: "bg-status-approved" };
+  return <section className="space-y-4" aria-label="Cronograma Gantt">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-xl font-bold">Cronograma da equipe</h2><p className="text-sm text-muted-foreground">{format(start, "dd MMM", { locale: ptBR })} — {format(addDays(start, days - 1), "dd MMM yyyy", { locale: ptBR })} · {visible.length} documentos · Prazos de entrega</p></div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Tabs value={String(days)} onValueChange={(value) => { setDays(Number(value)); setOffset(0); }}><TabsList><TabsTrigger value="7">Semana</TabsTrigger><TabsTrigger value="28">4 semanas</TabsTrigger></TabsList></Tabs>
-        <Button size="icon" variant="outline" aria-label="Período anterior" title="Período anterior" onClick={() => setOffset((value) => value - days)}><ChevronLeft /></Button>
+      <div><h2 className="text-xl font-bold">Cronograma</h2><p className="text-sm text-muted-foreground">{format(start, "dd MMM", { locale: ptBR })} — {format(addDays(start, days - 1), "dd MMM yyyy", { locale: ptBR })} · {live.length} documentos · {conflicts.size} com conflito</p></div>
+      <div className="flex items-center gap-2">
+        <Button size="icon" variant="outline" aria-label="Período anterior" onClick={() => setOffset((v) => v - 14)}><ChevronLeft /></Button>
         <Button variant="outline" onClick={() => setOffset(0)}>Hoje</Button>
-        <Button size="icon" variant="outline" aria-label="Próximo período" title="Próximo período" onClick={() => setOffset((value) => value + days)}><ChevronRight /></Button>
+        <Button size="icon" variant="outline" aria-label="Próximo período" onClick={() => setOffset((v) => v + 14)}><ChevronRight /></Button>
       </div>
     </div>
-    <div className="kanban-scroll max-h-[65vh] overflow-auto border border-border bg-card" role="region" aria-label="Entregas por colaborador" tabIndex={0}>
-      <div className="relative" style={{ minWidth: 180 + days * dayWidth }}>
+    <div className="kanban-scroll max-h-[70vh] overflow-auto border border-border bg-card" role="region" aria-label="Gantt de documentos" tabIndex={0}>
+      <div style={{ minWidth: 380 + days * dayWidth }}>
         <div className="sticky top-0 z-30 flex border-b border-border bg-card">
-          <div className="sticky left-0 z-40 w-[180px] shrink-0 border-r border-border bg-card p-3 text-xs font-semibold uppercase text-muted-foreground">Colaborador</div>
-          {dates.map((date) => <div key={dateKey(date)} style={{ width: dayWidth }} className={cn("shrink-0 border-r border-border px-2 py-2 text-center text-xs", dateKey(date) === dateKey(today) ? "bg-accent font-semibold text-primary" : "text-muted-foreground")}>
-            <p className="capitalize">{format(date, "EEE", { locale: ptBR })}</p><p className="mt-1 font-semibold">{format(date, "dd/MM")}{dateKey(date) === dateKey(today) && <span className="ml-1">Hoje</span>}</p>
-          </div>)}
+          <div className="sticky left-0 z-40 flex w-[380px] shrink-0 border-r border-border bg-card p-2 text-xs font-semibold uppercase text-muted-foreground"><span className="flex-1">Projeto / Documento</span><span className="w-12 text-right">%</span></div>
+          {dates.map((d) => <div key={dateKey(d)} style={{ width: dayWidth }} className={cn("shrink-0 border-r border-border py-1 text-center text-[10px]", dateKey(d) === dateKey(today) ? "bg-accent font-bold text-primary" : "text-muted-foreground")}><p className="capitalize">{format(d, "EEEEE", { locale: ptBR })}</p><p>{format(d, "dd")}</p></div>)}
         </div>
-        {rows.filter((row) => row.id !== "unassigned" || row.tasks.length > 0).map((person) => <div key={person.id} className="flex border-b border-border last:border-0" data-person-id={person.id}>
-          <div className="sticky left-0 z-20 w-[180px] shrink-0 border-r border-border bg-card p-3">
-            <span className="mb-2 grid size-7 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">{initials(person.name)}</span>
-            <p className="break-words text-sm font-semibold">{person.name}</p><p className="mt-1 text-xs text-muted-foreground">{person.tasks.length} entregas</p>
-          </div>
-          <div className="relative flex-1" style={{ minHeight: Math.max(112, person.tasks.length * 64 + 16) }}>
-            <div className="pointer-events-none absolute inset-0 flex">{dates.map((date) => <div key={dateKey(date)} style={{ width: dayWidth }} className={cn("h-full shrink-0 border-r border-border", dateKey(date) === dateKey(today) && "border-l-2 border-l-primary bg-accent/40")} />)}</div>
-            {person.tasks.length === 0 && <p className="relative p-4 text-xs text-muted-foreground">Sem entregas no período</p>}
-            {person.tasks.map((task, index) => <div key={task.id} className="absolute px-1" style={{ left: differenceInCalendarDays(parseISO(task.dueDate), start) * dayWidth, top: 8 + index * 64, width: dayWidth }}>
-              <Popover open={summary === `${person.id}-${task.id}`} onOpenChange={(open) => setSummary(open ? `${person.id}-${task.id}` : null)}>
-                <PopoverTrigger asChild><Button variant="outline" title={`${task.projectCode} — ${task.title}\n${task.status} · Entrega ${fmtDate(task.dueDate)}`} aria-label={`${person.name}: ${task.projectCode} — ${task.title}`} className={cn("h-14 w-full flex-col items-start justify-center gap-0.5 overflow-hidden border-l-4 px-2 text-left", STATUS_STYLE[task.status].badge, STATUS_STYLE[task.status].border)}>
-                  <span className="w-full truncate text-[11px] font-bold">{task.projectCode}</span><span className="w-full truncate text-[11px]">{task.title}</span><span className="flex gap-1 text-[10px]">{Boolean(task.qualityRework) && <AlertTriangle className="size-3" />}{fmtDate(task.dueDate).slice(0, 5)}</span>
-                </Button></PopoverTrigger>
-                <PopoverContent><DeliverySummary task={task} onDetails={() => { setSummary(null); setDetail(task); }} /></PopoverContent>
-              </Popover>
-            </div>)}
-          </div>
-        </div>)}
+        {groups.map((g) => {
+          const open = !collapsed[g.code];
+          const proj = projects.find((p) => p.code === g.code);
+          return <div key={g.code}>
+            <div className="flex border-b border-border bg-muted/50">
+              <button type="button" aria-expanded={open} onClick={() => setCollapsed((c) => ({ ...c, [g.code]: open }))} className="sticky left-0 z-20 flex w-[380px] shrink-0 items-center gap-1 border-r border-border bg-muted p-2 text-left text-sm font-bold">
+                {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}{companyOf(g.code)?.name} • {g.code}<span className="ml-1 truncate font-normal text-muted-foreground">{proj?.name}</span><span className="ml-auto text-xs font-normal text-muted-foreground">{g.tasks.length}</span>
+              </button>
+              <div className="flex-1" />
+            </div>
+            {open && g.tasks.map((t) => {
+              const pct = taskProgress(t);
+              const s = differenceInCalendarDays(ganttStart(t), start);
+              const e = differenceInCalendarDays(parseISO(t.dueDate), start) + 1;
+              const left = Math.max(0, s), right = Math.min(days, e);
+              const clash = conflicts.get(t.id);
+              const clashText = clash ? `Conflito de alocação: ${[...clash].join(", ")}` : "";
+              const owner = t.assignees[0] ? nameOf(t.assignees[0]) : undefined;
+              return <div key={t.id} className="flex border-b border-border" style={{ height: rowH }}>
+                <button type="button" onClick={() => setDetail(t)} className="sticky left-0 z-20 flex w-[380px] shrink-0 items-center gap-2 border-r border-border bg-card py-1 pl-8 pr-2 text-left hover:bg-accent">
+                  <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-semibold text-muted-foreground">[{t.docType}] {docCode(t, g.tasks)}</p><p className="truncate text-xs">{t.title}</p></div>
+                  {owner && <span title={owner} className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">{initials(owner)}</span>}
+                  <span className="w-10 text-right text-xs font-semibold">{pct}%</span>
+                </button>
+                <div className="relative flex-1">
+                  <div className="pointer-events-none absolute inset-0 flex">{dates.map((d) => <div key={dateKey(d)} style={{ width: dayWidth }} className={cn("h-full shrink-0 border-r border-border/50", dateKey(d) === dateKey(today) && "bg-accent/60")} />)}</div>
+                  {right > left && <button type="button" onClick={() => setDetail(t)} title={clashText || `${t.title} · ${pct}%`} aria-label={`${t.title} ${pct}%${clash ? ". " + clashText : ""}`}
+                    className={cn("absolute top-2 h-7 overflow-hidden rounded text-left text-[11px] font-semibold text-foreground", barColor[t.status], clash && "ring-2 ring-destructive")}
+                    style={{ left: left * dayWidth + 2, width: (right - left) * dayWidth - 4 }}>
+                    <span className="absolute inset-y-0 left-0 bg-foreground/25" style={{ width: `${pct}%` }} />
+                    <span className="relative flex h-full items-center gap-1 truncate px-2">{clash && <AlertTriangle className="size-3.5 shrink-0 text-destructive" />}{t.title} · {pct}%</span>
+                  </button>}
+                  {clash && right > left && <span className="pointer-events-none absolute -bottom-0.5 text-[9px] font-medium text-destructive" style={{ left: left * dayWidth + 4 }}>⚠️ {clashText}</span>}
+                </div>
+              </div>;
+            })}
+          </div>;
+        })}
       </div>
     </div>
-    <div className="flex flex-wrap gap-3">{STATUSES.map((status) => <span key={status} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className={cn("size-2 rounded-full", STATUS_STYLE[status].dot)} />{status}</span>)}</div>
-    {visible.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma entrega neste período para os filtros selecionados.</p>}
+    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">{STATUSES.map((st) => <span key={st} className="inline-flex items-center gap-1.5"><span className={cn("size-2 rounded-full", STATUS_STYLE[st].dot)} />{st}</span>)}<span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="size-3" />Conflito de alocação</span><span>· Barras: 14 dias até o prazo de entrega</span></div>
+    {live.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">Nenhum documento para os filtros selecionados.</p>}
     <TaskViewDialog task={detail} onClose={() => setDetail(null)} onEdit={onEdit} />
   </section>;
 }
