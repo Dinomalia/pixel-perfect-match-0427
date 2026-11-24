@@ -4,15 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const AUTH_KEY = "projecthub-auth-v1";
-const FIXED_PASSWORD = "galhofraco";
+import { verifyPlannerPassword } from "@/lib/api/planner.functions";
+
+const AUTH_KEY = "projecthub-auth-v2";
 
 export function isAuthenticated(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return sessionStorage.getItem(AUTH_KEY) === "1";
+    return !!sessionStorage.getItem(AUTH_KEY);
   } catch {
     return false;
+  }
+}
+
+export function getSessionPassword(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(AUTH_KEY);
+  } catch {
+    return null;
   }
 }
 
@@ -27,11 +37,18 @@ export function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (password === FIXED_PASSWORD) {
+    let ok = false;
+    try {
+      ok = (await verifyPlannerPassword({ data: { password } })).ok;
+    } catch {
+      setError("Não foi possível verificar a senha.");
+      return;
+    }
+    if (ok) {
       try {
-        sessionStorage.setItem(AUTH_KEY, "1");
+        sessionStorage.setItem(AUTH_KEY, password);
       } catch {}
       setError("");
       onSuccess();
