@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, CalendarDays, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
+import { BarChart3, CalendarDays, FileSpreadsheet, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
 import { TimelineView } from "@/components/planner/Timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { PEOPLE, docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
+import { exportKanbanToExcel } from "@/lib/exportExcel";
+import { toast } from "sonner";
 import { KanbanView, type GroupBy } from "@/components/planner/KanbanView";
 import { HomeView } from "@/components/planner/HomeView";
 import { DashboardView } from "@/components/planner/DashboardView";
@@ -47,7 +49,7 @@ export const Route = createFileRoute("/")({
 type View = "home" | "kanban" | "dashboard" | "table" | "timeline" | "trash";
 
 function App({ onLogout }: { onLogout?: () => void }) {
-  const { filters, setFilters, projects, companies, docTypes, trash } = useTasks();
+  const { filtered, filters, setFilters, projects, companies, docTypes, trash, companyOf } = useTasks();
   useUndoShortcut();
   const [view, setView] = useState<View>("home");
   const [me, setMe] = useState("p1");
@@ -122,11 +124,27 @@ function App({ onLogout }: { onLogout?: () => void }) {
         {view === "home" && <HomeView me={me} onEdit={openEdit} onOpenProject={(code) => { setFilters({ company: "all", project: code, person: "all", docType: "all", search: "" }); setView("kanban"); }} />}
         {view === "kanban" && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">Agrupar por</span>
               <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
                 <TabsList><TabsTrigger value="status">Status</TabsTrigger><TabsTrigger value="person">Colaborador</TabsTrigger><TabsTrigger value="project">Projeto</TabsTrigger></TabsList>
               </Tabs>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                onClick={() => {
+                  if (filtered.length === 0) {
+                    toast.error("Nenhum documento para exportar");
+                    return;
+                  }
+                  exportKanbanToExcel(filtered, projects, companyOf);
+                  toast.success(`${filtered.length} documento(s) exportado(s) para Excel`);
+                }}
+              >
+                <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                Exportar Excel
+              </Button>
             </div>
             <KanbanView groupBy={groupBy} onEdit={openEdit} onNew={openNew} />
           </div>
