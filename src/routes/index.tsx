@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, CalendarDays, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, Plus, Search } from "lucide-react";
+import { BarChart3, CalendarDays, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
 import { TimelineView } from "@/components/planner/Timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ import { DashboardView } from "@/components/planner/DashboardView";
 import { TableView } from "@/components/planner/TableView";
 import { TaskDialog } from "@/components/planner/TaskDialog";
 import { TrashView, useUndoShortcut } from "@/components/planner/Trash";
+import { LoginScreen, clearAuthentication, isAuthenticated } from "@/components/planner/LoginScreen";
+
+function IndexPage() {
+  const [authed, setAuthed] = useState(() => isAuthenticated());
+  if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
+  return (
+    <TasksProvider>
+      <TooltipProvider delayDuration={200}>
+        <App onLogout={() => { clearAuthentication(); setAuthed(false); }} />
+        <Toaster richColors />
+      </TooltipProvider>
+    </TasksProvider>
+  );
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,14 +41,12 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => (
-    <TasksProvider><TooltipProvider delayDuration={200}><App /><Toaster richColors /></TooltipProvider></TasksProvider>
-  ),
+  component: IndexPage,
 });
 
 type View = "home" | "kanban" | "dashboard" | "table" | "timeline" | "trash";
 
-function App() {
+function App({ onLogout }: { onLogout?: () => void }) {
   const { filters, setFilters, projects, companies, docTypes, trash } = useTasks();
   useUndoShortcut();
   const [view, setView] = useState<View>("home");
@@ -70,6 +82,11 @@ function App() {
             <SelectContent>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
           <Button onClick={() => openNew()} className=" bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
+          {onLogout && (
+            <Button variant="ghost" size="icon" onClick={onLogout} title="Sair" aria-label="Sair" className="text-navy-foreground/80 hover:bg-navy-foreground/10 hover:text-navy-foreground">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </header>
       {view !== "home" && view !== "trash" && <div className="border-b border-border bg-card">

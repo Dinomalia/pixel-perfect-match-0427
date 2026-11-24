@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type Context } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type Context, type ReactNode } from "react";
+import { loadCloudState, saveCloudState } from "./cloudStorage";
 
 export const STATUSES = ["Elaboração", "Verificação", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
 export type Status = (typeof STATUSES)[number];
@@ -194,25 +195,56 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [customDocTypes, setCustomDocTypes] = useState<DocType[]>([]);
   registerDocTypes(customDocTypes);
   const [loaded, setLoaded] = useState(false);
+  const cloudReady = useRef(false);
+  const skipNextCloudSave = useRef(false);
   const [filters, setF] = useState<Filters>({ search: "", company: "all", project: "all", person: "all", docType: "all" });
 
   useEffect(() => {
+    let initial = { tasks: SEED_TASKS, projects: SEED_PROJECTS, companies: SEED_COMPANIES, revTrash: [] as TrashRevision[], people: PEOPLE, customDocTypes: [] as DocType[] };
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const d = JSON.parse(raw);
-        if (Array.isArray(d.tasks)) setTasks(d.tasks);
-        if (Array.isArray(d.projects)) setProjects(d.projects);
-        if (Array.isArray(d.companies)) setCompanies(d.companies);
-        if (Array.isArray(d.revTrash)) setRevTrash(d.revTrash);
-        if (Array.isArray(d.people)) setPeople(d.people);
-        if (Array.isArray(d.customDocTypes)) setCustomDocTypes(d.customDocTypes);
+        if (Array.isArray(d.tasks)) { setTasks(d.tasks); initial.tasks = d.tasks; }
+        if (Array.isArray(d.projects)) { setProjects(d.projects); initial.projects = d.projects; }
+        if (Array.isArray(d.companies)) { setCompanies(d.companies); initial.companies = d.companies; }
+        if (Array.isArray(d.revTrash)) { setRevTrash(d.revTrash); initial.revTrash = d.revTrash; }
+        if (Array.isArray(d.people)) { setPeople(d.people); initial.people = d.people; }
+        if (Array.isArray(d.customDocTypes)) { setCustomDocTypes(d.customDocTypes); initial.customDocTypes = d.customDocTypes; }
       }
     } catch {}
     setLoaded(true);
+
+    let cancelled = false;
+    loadCloudState().then(({ data, error }) => {
+      if (cancelled || error) return;
+      if (data && (Array.isArray(data.tasks) || Array.isArray(data.projects) || Array.isArray(data.companies))) {
+        skipNextCloudSave.current = true;
+        if (Array.isArray(data.tasks)) setTasks(data.tasks as Task[]);
+        if (Array.isArray(data.projects)) setProjects(data.projects as Project[]);
+        if (Array.isArray(data.companies)) setCompanies(data.companies as Company[]);
+        if (Array.isArray(data.revTrash)) setRevTrash(data.revTrash as TrashRevision[]);
+        if (Array.isArray(data.people)) setPeople(data.people as Person[]);
+        if (Array.isArray(data.customDocTypes)) setCustomDocTypes(data.customDocTypes as DocType[]);
+        cloudReady.current = true;
+      } else {
+        cloudReady.current = true;
+        void saveCloudState(initial);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash, people, customDocTypes }));
+    if (!loaded) return;
+    const payload = { tasks: allTasks, projects, companies, revTrash, people, customDocTypes };
+    localStorage.setItem(KEY, JSON.stringify(payload));
+    if (!cloudReady.current) return;
+    if (skipNextCloudSave.current) {
+      skipNextCloudSave.current = false;
+      return;
+    }
+    const timer = setTimeout(() => { void saveCloudState(payload); }, 400);
+    return () => clearTimeout(timer);
   }, [allTasks, projects, companies, revTrash, people, customDocTypes, loaded]);
 
   const companyOf = (code: string) => {
