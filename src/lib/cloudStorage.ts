@@ -15,7 +15,7 @@ export async function loadCloudState(): Promise<{ data: CloudPlannerPayload | nu
   if (!password) return { data: null, error: "Não autenticado" };
   try {
     const res = await loadPlannerState({ data: { password } });
-    return { data: (res.data as CloudPlannerPayload | null) ?? null, error: null };
+    return { data: res.json ? (JSON.parse(res.json) as CloudPlannerPayload) : null, error: null };
   } catch (err) {
     return { data: null, error: err instanceof Error ? err.message : "Erro ao carregar da nuvem" };
   }

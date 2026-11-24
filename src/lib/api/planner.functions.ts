@@ -26,7 +26,7 @@ export const loadPlannerState = createServerFn({ method: "POST" })
     const { data: row, error } = await supabaseAdmin
       .from("planner_state").select("data").eq("id", STATE_ID).maybeSingle();
     if (error) throw new Error("Falha ao carregar");
-    return { data: (row?.data ?? null) as Record<string, unknown> | null };
+    return { json: row?.data == null ? null : JSON.stringify(row.data) };
   });
 
 export const savePlannerState = createServerFn({ method: "POST" })
