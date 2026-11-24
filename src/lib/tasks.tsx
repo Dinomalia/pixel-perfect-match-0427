@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-export const STATUSES = ["Elaboração", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
+export const STATUSES = ["Elaboração", "Verificação", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
 export type Status = (typeof STATUSES)[number];
 export const PRIORITIES = ["Baixa", "Média", "Alta", "Crítica"] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
-export const DEFAULT_DOC_TYPES: { code: string; label: string }[] = [
+export type DocType = { code: string; label: string };
+export const DEFAULT_DOC_TYPES: DocType[] = [
   { code: "FD", label: "Folha de Dados" },
   { code: "MD", label: "Memorial Descritivo" },
   { code: "ET", label: "Especificação Técnica" },
@@ -78,6 +79,7 @@ export const nextRev = (r: string) => {
 
 export const STATUS_STYLE: Record<Status, { badge: string; dot: string; chart: string; border: string }> = {
   Elaboração: { badge: "bg-status-draft/15 text-status-draft-foreground border-status-draft/40", dot: "bg-status-draft", chart: "var(--status-draft)", border: "border-l-status-draft" },
+  Verificação: { badge: "bg-status-verify/15 text-status-verify border-status-verify/40", dot: "bg-status-verify", chart: "var(--status-verify)", border: "border-l-status-verify" },
   Qualidade: { badge: "bg-status-quality/15 text-status-quality border-status-quality/40", dot: "bg-status-quality", chart: "var(--status-quality)", border: "border-l-status-quality" },
   Retrabalho: { badge: "bg-status-rework/15 text-status-rework border-status-rework/40", dot: "bg-status-rework", chart: "var(--status-rework)", border: "border-l-status-rework" },
   "Em Aprovação": { badge: "bg-status-pending/15 text-status-pending border-status-pending/40", dot: "bg-status-pending", chart: "var(--status-pending)", border: "border-l-status-pending" },
@@ -152,6 +154,7 @@ type Ctx = {
   companies: Company[];
   projects: Project[];
   docTypes: string[];
+  addDocType: (code: string, label: string) => void;
   filtered: Task[];
   filters: Filters;
   setFilters: (f: Partial<Filters>) => void;
@@ -187,6 +190,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>(SEED_COMPANIES);
   const [people, setPeople] = useState<Person[]>(PEOPLE);
   registerPeople(people);
+  const [customDocTypes, setCustomDocTypes] = useState<DocType[]>([]);
+  registerDocTypes(customDocTypes);
   const [loaded, setLoaded] = useState(false);
   const [filters, setF] = useState<Filters>({ search: "", company: "all", project: "all", person: "all", docType: "all" });
 
@@ -200,13 +205,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (Array.isArray(d.companies)) setCompanies(d.companies);
         if (Array.isArray(d.revTrash)) setRevTrash(d.revTrash);
         if (Array.isArray(d.people)) setPeople(d.people);
+        if (Array.isArray(d.customDocTypes)) setCustomDocTypes(d.customDocTypes);
       }
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
-    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash, people }));
-  }, [allTasks, projects, companies, revTrash, people, loaded]);
+    if (loaded) localStorage.setItem(KEY, JSON.stringify({ tasks: allTasks, projects, companies, revTrash, people, customDocTypes }));
+  }, [allTasks, projects, companies, revTrash, people, customDocTypes, loaded]);
 
   const companyOf = (code: string) => {
     const p = projects.find((x) => x.code === code);
@@ -215,9 +221,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const docTypes = useMemo(() => {
     const s = new Set(DEFAULT_DOC_TYPES.map((d) => d.code));
+    customDocTypes.forEach((d) => s.add(d.code));
     tasks.forEach((t) => t.docType && s.add(t.docType));
     return [...s];
-  }, [tasks]);
+  }, [tasks, customDocTypes]);
 
   const filtered = useMemo(() => {
     const q = filters.search.toLowerCase().trim();
@@ -289,6 +296,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       setUndoStack((u) => [...u, { kind: "revision", ...entry }]);
     },
     tasks, projects, companies, docTypes, filtered, filters, companyOf,
+    addDocType: (code, label) => {
+      const c = code.trim().toUpperCase(); const l = label.trim();
+      if (!c || !l || DEFAULT_DOC_TYPES.some((d) => d.code === c)) return;
+      setCustomDocTypes((ds) => [...ds.filter((d) => d.code !== c), { code: c, label: l }]);
+    },
     setFilters: (f) => setF((p) => ({ ...p, ...f })),
     upsertTask: (task) => setTasks((ts) => (ts.some((x) => x.id === task.id) ? ts.map((x) => (x.id === task.id ? updateRevision(x, task) : x)) : [...ts, task])),
     deleteTask: (id) => {
@@ -355,7 +367,9 @@ export const registerPeople = (ps: Person[]) => { peopleState = ps; };
 export const personById = (id: string) => peopleState.find((p) => p.id === id);
 export const initials = (name: string) => name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 export const fmtDate = (d: string) => (d ? d.split("-").reverse().join("/") : "—");
-export const docLabel = (code: string) => DEFAULT_DOC_TYPES.find((d) => d.code === code)?.label ?? "Tipo customizado";
+let customDocTypesState: DocType[] = [];
+export const registerDocTypes = (ds: DocType[]) => { customDocTypesState = ds; };
+export const docLabel = (code: string) => DEFAULT_DOC_TYPES.find((d) => d.code === code)?.label ?? customDocTypesState.find((d) => d.code === code)?.label ?? "Tipo customizado";
 
 export const daysUntil = (d: string) => {
   if (!d) return Infinity;

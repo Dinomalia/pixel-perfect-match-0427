@@ -25,7 +25,7 @@ const schema = z.object({
 const NEW = "__new__";
 
 export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: boolean; onOpenChange: (o: boolean) => void; task?: Task | null; defaultStatus?: Status }) {
-  const { projects, companies, docTypes, upsertTask, addProject, addCompany, deleteTask, undo, companyOf, filters } = useTasks();
+  const { projects, companies, docTypes, addDocType, upsertTask, addProject, addCompany, deleteTask, undo, companyOf, filters } = useTasks();
   const blank = (): Task => ({ id: "", title: "", projectCode: "", docType: "", gedeUrl: "", assignees: [], dueDate: "", status: defaultStatus ?? "Elaboração", priority: "Média", notes: "" });
   const [form, setForm] = useState<Task>(blank);
   const [companyId, setCompanyId] = useState("");
@@ -33,6 +33,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
   const [customType, setCustomType] = useState("");
+  const [customTypeName, setCustomTypeName] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +43,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
       const proj = filters.project !== "all" ? filters.project : projects.find((p) => p.companyId === cid)?.code ?? "";
       f.projectCode = proj;
     }
-    setForm(f); setCompanyId(cid); setNewCompany(""); setNewCode(""); setNewName(""); setCustomType("");
+    setForm(f); setCompanyId(cid); setNewCompany(""); setNewCode(""); setNewName(""); setCustomType(""); setCustomTypeName("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task, defaultStatus]);
 
@@ -64,9 +65,12 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
       addProject({ code: c, name: n, companyId: cid }); code = c;
     }
     if (!code) { toast.error("Selecione o projeto"); return; }
-    const docType = form.docType === NEW ? customType.trim().toUpperCase() : form.docType;
+    const isNewType = form.docType === NEW;
+    const docType = isNewType ? customType.trim().toUpperCase() : form.docType;
+    if (isNewType && !customTypeName.trim()) { toast.error("Informe o nome do novo tipo"); return; }
     const r = schema.safeParse({ ...form, docType });
     if (!r.success) { toast.error(r.error.issues[0]?.message ?? "Dados inválidos"); return; }
+    if (isNewType) addDocType(docType, customTypeName);
     upsertTask({ ...form, ...r.data, projectCode: code, id: form.id || `t${Date.now()}` });
     toast.success(form.id ? "Documento atualizado" : "Documento criado");
     onOpenChange(false);
@@ -117,7 +121,10 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
             </Select>
           </div>
           {form.docType === NEW ? (
-            <div className="space-y-1.5"><Label>Sigla do novo tipo</Label><Input placeholder="ex.: RT" value={customType} onChange={(e) => setCustomType(e.target.value)} maxLength={10} /></div>
+            <>
+              <div className="space-y-1.5"><Label>Sigla do novo tipo</Label><Input placeholder="ex.: ADF" value={customType} onChange={(e) => setCustomType(e.target.value)} maxLength={10} /></div>
+              <div className="sm:col-span-2 space-y-1.5"><Label>Nome do novo tipo</Label><Input placeholder="ex.: Análise de Falhas" value={customTypeName} onChange={(e) => setCustomTypeName(e.target.value)} maxLength={60} /></div>
+            </>
           ) : (
             <div className="space-y-1.5"><Label>Prazo</Label><Input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} /></div>
           )}

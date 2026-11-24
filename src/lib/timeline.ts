@@ -24,7 +24,7 @@ export function deliveryAlert(task: Task, today: Date) {
   return Boolean(task.qualityRework) || (remaining >= 0 && remaining < 7);
 }
 export const GANTT_DEFAULT_DAYS = 14;
-export const STATUS_PROGRESS: Record<string, number> = { "Elaboração": 25, Qualidade: 60, Retrabalho: 45, "Em Aprovação": 85, Aprovado: 100 };
+export const STATUS_PROGRESS: Record<string, number> = { "Elaboração": 25, "Verificação": 40, Qualidade: 60, Retrabalho: 45, "Em Aprovação": 85, Aprovado: 100 };
 
 export function ganttStart(task: Task) {
   return addDays(parseISO(task.dueDate), -(GANTT_DEFAULT_DAYS - 1));
