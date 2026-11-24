@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type Context } from "react";
 
 export const STATUSES = ["Elaboração", "Verificação", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
 export type Status = (typeof STATUSES)[number];
@@ -177,7 +177,8 @@ type Ctx = {
   addPerson: (name: string, role: string) => Person;
 };
 
-const TasksContext = createContext<Ctx | null>(null);
+const g = globalThis as unknown as { __tasksCtx?: Context<Ctx | null> };
+const TasksContext = g.__tasksCtx ?? (g.__tasksCtx = createContext<Ctx | null>(null));
 const KEY = "planner-bi-v2";
 
 export function TasksProvider({ children }: { children: ReactNode }) {
