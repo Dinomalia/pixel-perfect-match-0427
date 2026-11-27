@@ -64,8 +64,8 @@ function App({ onLogout }: { onLogout?: () => void }) {
   const openEdit = (t: Task) => { setEditing(t); setOpen(true); };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-navy text-navy-foreground">
+    <div className="min-h-screen w-full bg-background">
+      <header className="w-full bg-navy text-navy-foreground">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-navy-foreground/10"><KanbanSquare className="h-5 w-5" /></div>
