@@ -35,7 +35,7 @@ export function TimelineView({ onEdit }: { onEdit: (task: Task) => void }) {
   const conflicts = allocationConflicts(live, nameOf);
   const groups = [...new Set(live.map((t) => t.projectCode))].sort().map((code) => ({ code, tasks: live.filter((t) => t.projectCode === code).sort((x, y) => x.dueDate.localeCompare(y.dueDate)) }));
   const docCode = (t: Task, list: Task[]) => `${t.projectCode}-${t.docType}-${String(list.filter((x) => x.docType === t.docType).indexOf(t) + 1).padStart(3, "0")}`;
-  const barColor: Record<string, string> = { "Elaboração": "bg-status-draft", "Verificação": "bg-status-verify", Qualidade: "bg-status-quality", Retrabalho: "bg-status-rework", "Em Aprovação": "bg-status-pending", Aprovado: "bg-status-approved" };
+  const barColor: Record<string, string> = { "Elaboração": "bg-status-draft", "Verificação": "bg-status-verify", Qualidade: "bg-status-quality", Retrabalho: "bg-status-rework", "Em Aprovação": "bg-status-pending", Aprovado: "bg-status-approved", Hold: "bg-status-hold" };
   return <section className="space-y-4" aria-label="Cronograma Gantt">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h2 className="text-xl font-bold">Cronograma</h2><p className="text-sm text-muted-foreground">{format(start, "dd MMM", { locale: ptBR })} — {format(addDays(start, days - 1), "dd MMM yyyy", { locale: ptBR })} · {live.length} documentos · {conflicts.size} com conflito</p></div>

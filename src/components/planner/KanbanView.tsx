@@ -13,7 +13,7 @@ export type GroupBy = "status" | "person" | "project";
 type Col = { key: string; title: string; sub?: string; dot?: string; avatar?: string; items: Task[] };
 
 export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdit: (t: Task) => void; onNew: (s: Status) => void }) {
-  const { filtered, companyOf, moveTask, upsertTask, projects, swapRevision, deleteRevision, toggleQualityRework } = useTasks();
+  const { filtered, people, companyOf, moveTask, upsertTask, projects, swapRevision, deleteRevision, toggleQualityRework } = useTasks();
   const [over, setOver] = useState<string | null>(null);
   const [revTask, setRevTask] = useState<Task | null>(null);
   const [viewTask, setViewTask] = useState<Task | null>(null);
@@ -22,7 +22,7 @@ export function KanbanView({ groupBy, onEdit, onNew }: { groupBy: GroupBy; onEdi
   if (groupBy === "status") {
     cols = STATUSES.map((s) => ({ key: s, title: s, dot: STATUS_STYLE[s].dot, items: filtered.filter((t) => t.status === s) }));
   } else if (groupBy === "person") {
-    cols = PEOPLE.map((p) => ({ key: p.id, title: p.name, sub: p.role, avatar: initials(p.name), items: filtered.filter((t) => t.assignees.includes(p.id)) }));
+    cols = people.map((p) => ({ key: p.id, title: p.name, sub: p.role, avatar: initials(p.name), items: filtered.filter((t) => t.assignees.includes(p.id)) }));
   } else {
     const codes = [...new Set(filtered.map((t) => t.projectCode))];
     cols = projects.filter((p) => codes.includes(p.code)).map((p) => ({ key: p.code, title: p.code, sub: `${companyOf(p.code)?.name ?? ""} · ${p.name}`, items: filtered.filter((t) => t.projectCode === p.code) }));

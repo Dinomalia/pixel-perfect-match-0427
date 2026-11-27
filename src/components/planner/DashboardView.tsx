@@ -59,7 +59,7 @@ function RateTable({ rows }: { rows: { key: string; label: string; sub?: string 
 }
 
 export function DashboardView() {
-  const { filtered, projects, companies, docTypes, companyOf } = useTasks();
+  const { filtered, people, projects, companies, docTypes, companyOf } = useTasks();
   const activeProjects = new Set(filtered.map((t) => t.projectCode)).size;
   const count = (s: string) => filtered.filter((t) => t.status === s).length;
 
@@ -80,7 +80,7 @@ export function DashboardView() {
   qr.forEach((t) => { const k = (t.dueDate || "").slice(0, 7); if (k) monthMap.set(k, (monthMap.get(k) ?? 0) + 1); });
   const qrByMonth = [...monthMap.entries()].sort(([a], [b]) => a.localeCompare(b))
     .map(([k, value]) => ({ name: `${MESES[Number(k.slice(5, 7)) - 1]}/${k.slice(2, 4)}`, value }));
-  const byPerson = PEOPLE.map((p) => ({ name: p.name.split(" ")[0], value: filtered.filter((t) => t.assignees.includes(p.id)).length })).sort((a, b) => b.value - a.value);
+  const byPerson = people.map((p) => ({ name: p.name.split(" ")[0], value: filtered.filter((t) => t.assignees.includes(p.id)).length })).sort((a, b) => b.value - a.value);
   const byType = docTypes.map((d) => {
     const ts = filtered.filter((t) => t.docType === d);
     const row: Record<string, string | number> = { name: d, total: ts.length };

@@ -25,7 +25,7 @@ const schema = z.object({
 const NEW = "__new__";
 
 export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: boolean; onOpenChange: (o: boolean) => void; task?: Task | null; defaultStatus?: Status }) {
-  const { projects, companies, docTypes, addDocType, upsertTask, addProject, addCompany, deleteTask, undo, companyOf, filters } = useTasks();
+  const { people, projects, companies, docTypes, addDocType, upsertTask, addProject, addCompany, deleteTask, undo, companyOf, filters } = useTasks();
   const blank = (): Task => ({ id: "", title: "", projectCode: "", docType: "", gedeUrl: "", assignees: [], dueDate: "", status: defaultStatus ?? "Elaboração", priority: "Média", notes: "" });
   const [form, setForm] = useState<Task>(blank);
   const [companyId, setCompanyId] = useState("");
@@ -149,7 +149,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
           <div className="sm:col-span-2 space-y-1.5">
             <Label>Colaboradores</Label>
             <div className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-2">
-              {PEOPLE.map((p) => (
+              {people.map((p) => (
                 <label key={p.id} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={form.assignees.includes(p.id)} onCheckedChange={(c) => set("assignees", c ? [...form.assignees, p.id] : form.assignees.filter((x) => x !== p.id))} />
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">{initials(p.name)}</span>

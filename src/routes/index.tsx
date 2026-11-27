@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, CalendarDays, FileSpreadsheet, Home, Trash2, ShieldAlert, ChevronRight, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
+import { BarChart3, CalendarDays, FileSpreadsheet, Home, Trash2, ShieldAlert, ChevronRight, RotateCcw, UserPlus, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
 import { TimelineView } from "@/components/planner/Timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AddPersonDialog } from "@/components/planner/AddPersonDialog";
 import { Toaster } from "@/components/ui/sonner";
-import { PEOPLE, docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
+import { docLabel, TasksProvider, useTasks, type Status, type Task } from "@/lib/tasks";
 import { exportKanbanToExcel } from "@/lib/exportExcel";
 import { toast } from "sonner";
 import { KanbanView, type GroupBy } from "@/components/planner/KanbanView";
@@ -49,12 +50,13 @@ export const Route = createFileRoute("/")({
 type View = "home" | "kanban" | "dashboard" | "table" | "timeline" | "trash";
 
 function App({ onLogout }: { onLogout?: () => void }) {
-  const { filtered, filters, setFilters, projects, companies, docTypes, trash, companyOf } = useTasks();
+  const { filtered, people, filters, setFilters, projects, companies, docTypes, trash, companyOf } = useTasks();
   useUndoShortcut();
   const [view, setView] = useState<View>("home");
   const [me, setMe] = useState("p1");
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [open, setOpen] = useState(false);
+  const [addingPerson, setAddingPerson] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defStatus, setDefStatus] = useState<Status>("Elaboração");
 
@@ -79,9 +81,9 @@ function App({ onLogout }: { onLogout?: () => void }) {
               <TabsTrigger value="trash" className="nav-tab"><Trash2 className="mr-1.5 h-4 w-4" />Lixeira{trash.length > 0 && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{trash.length}</span>}</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Select value={me} onValueChange={setMe}>
+          <Select value={me} onValueChange={(v) => v === "__add" ? setAddingPerson(true) : setMe(v)}>
             <SelectTrigger className="ml-auto w-44 border-navy-foreground/20 bg-navy-foreground/10 text-navy-foreground" aria-label="Usuário atual"><SelectValue /></SelectTrigger>
-            <SelectContent>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+            <SelectContent>{people.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}<SelectSeparator /><SelectItem value="__add" className="text-primary"><span className="inline-flex items-center gap-1.5"><UserPlus className="h-3.5 w-3.5" />Adicionar colaborador</span></SelectItem></SelectContent>
           </Select>
           <Button onClick={() => openNew()} className=" bg-navy-foreground text-navy hover:bg-navy-foreground/90"><Plus className="h-4 w-4" />Novo Documento</Button>
           {onLogout && (
@@ -111,13 +113,14 @@ function App({ onLogout }: { onLogout?: () => void }) {
           </nav>
           <Select value={filters.person} onValueChange={(v) => setFilters({ person: v })}>
             <SelectTrigger className="w-full sm:w-52"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Todos os colaboradores</SelectItem>{PEOPLE.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="all">Todos os colaboradores</SelectItem>{people.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
           <Button variant={filters.qualityOnly ? "default" : "outline"} onClick={() => setFilters({ qualityOnly: !filters.qualityOnly })}><ShieldAlert className="h-4 w-4" />Retrabalho Qualidade</Button>
           <div className="relative min-w-[200px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Buscar documentos..." value={filters.search} onChange={(e) => setFilters({ search: e.target.value })} maxLength={100} />
           </div>
+          <Button variant="outline" onClick={() => setFilters({ company: "all", project: "all", docType: "all", person: "all", qualityOnly: false, search: "" })}><RotateCcw className="h-4 w-4" />Limpar filtros</Button>
         </div>
       </div>}
       <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
@@ -154,6 +157,7 @@ function App({ onLogout }: { onLogout?: () => void }) {
         {view === "timeline" && <TimelineView onEdit={openEdit} />}
         {view === "trash" && <TrashView />}
       </main>
+      <AddPersonDialog open={addingPerson} onClose={() => setAddingPerson(false)} onAdded={(id) => setMe(id)} />
       <TaskDialog open={open} onOpenChange={setOpen} task={editing} defaultStatus={defStatus} />
     </div>
   );

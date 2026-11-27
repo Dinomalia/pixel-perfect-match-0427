@@ -40,7 +40,7 @@ export function ChecklistEditor({ task }: { task: Task }) {
           <li key={i.id} className="group flex items-center gap-2 text-sm">
             <ItemToggle done={i.done} label={`Concluir ${i.text}`} onClick={() => updateChecklist(task.id, (t) => ({ checklist: (t.checklist ?? []).map((c) => c.id === i.id ? { ...c, done: !c.done } : c) }))} />
             <span className={cn("flex-1", i.done && "text-muted-foreground line-through")}>{i.text}</span>
-            <button type="button" aria-label={`Remover ${i.text}`} className="text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+            <button type="button" aria-label={`Remover ${i.text}`} title="Excluir item" className="rounded p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
               onClick={() => updateChecklist(task.id, (t) => ({ checklist: (t.checklist ?? []).filter((c) => c.id !== i.id) }))}><Trash2 className="h-3.5 w-3.5" /></button>
           </li>
         ))}

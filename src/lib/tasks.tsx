@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type Context, type ReactNode } from "react";
 import { loadCloudState, saveCloudState } from "./cloudStorage";
 
-export const STATUSES = ["Elaboração", "Verificação", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado"] as const;
+export const STATUSES = ["Elaboração", "Verificação", "Qualidade", "Retrabalho", "Em Aprovação", "Aprovado", "Hold"] as const;
 export type Status = (typeof STATUSES)[number];
 export const PRIORITIES = ["Baixa", "Média", "Alta", "Crítica"] as const;
 export type Priority = (typeof PRIORITIES)[number];
@@ -85,6 +85,7 @@ export const STATUS_STYLE: Record<Status, { badge: string; dot: string; chart: s
   Retrabalho: { badge: "bg-status-rework/15 text-status-rework border-status-rework/40", dot: "bg-status-rework", chart: "var(--status-rework)", border: "border-l-status-rework" },
   "Em Aprovação": { badge: "bg-status-pending/15 text-status-pending border-status-pending/40", dot: "bg-status-pending", chart: "var(--status-pending)", border: "border-l-status-pending" },
   Aprovado: { badge: "bg-status-approved/15 text-status-approved border-status-approved/40", dot: "bg-status-approved", chart: "var(--status-approved)", border: "border-l-status-approved" },
+  Hold: { badge: "bg-status-hold/15 text-status-hold border-status-hold/40", dot: "bg-status-hold", chart: "var(--status-hold)", border: "border-l-status-hold" },
 };
 
 export const PRIORITY_STYLE: Record<Priority, string> = {
@@ -398,7 +399,7 @@ export function useTasks() {
 let peopleState = PEOPLE;
 export const registerPeople = (ps: Person[]) => { peopleState = ps; };
 export const personById = (id: string) => peopleState.find((p) => p.id === id);
-export const initials = (name: string) => name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+export const initials = (name: string) => { const w = name.trim().split(/\s+/).filter(Boolean); return ((w[0]?.[0] ?? "") + (w.length > 1 ? (w[w.length - 1]?.[0] ?? "") : "")).toUpperCase(); };
 export const fmtDate = (d: string) => (d ? d.split("-").reverse().join("/") : "—");
 let customDocTypesState: DocType[] = [];
 export const registerDocTypes = (ds: DocType[]) => { customDocTypesState = ds; };
