@@ -88,16 +88,11 @@ alter table public.documents enable row level security;
 alter table public.daily_time_logs enable row level security;
 
 drop policy if exists "public_rw_parent_projects" on public.parent_projects;
-create policy "public_rw_parent_projects" on public.parent_projects for all to anon, authenticated using (true) with check (true);
-
 drop policy if exists "public_rw_project_phases" on public.project_phases;
-create policy "public_rw_project_phases" on public.project_phases for all to anon, authenticated using (true) with check (true);
-
 drop policy if exists "public_rw_document_stages" on public.document_stages;
-create policy "public_rw_document_stages" on public.document_stages for all to anon, authenticated using (true) with check (true);
-
 drop policy if exists "public_rw_documents" on public.documents;
-create policy "public_rw_documents" on public.documents for all to anon, authenticated using (true) with check (true);
-
 drop policy if exists "public_rw_daily_time_logs" on public.daily_time_logs;
-create policy "public_rw_daily_time_logs" on public.daily_time_logs for all to anon, authenticated using (true) with check (true);
+
+revoke all on public.parent_projects, public.project_phases, public.document_stages, public.documents, public.daily_time_logs from anon;
+revoke all on public.parent_projects, public.project_phases, public.document_stages, public.documents, public.daily_time_logs from authenticated;
+grant all on public.parent_projects, public.project_phases, public.document_stages, public.documents, public.daily_time_logs to service_role;

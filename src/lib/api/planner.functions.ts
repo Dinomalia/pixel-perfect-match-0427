@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 
 const STATE_ID = "default";
-// Shared team password, checked only on the server (prefers env var when set).
-const TEAM_PASSWORD = process.env["PLANNER_TEAM_PASSWORD"] || "galhofraco";
+// Shared team password, checked only on the server via environment variable.
+const getTeamPassword = (): string => {
+  const pwd = process.env["PLANNER_TEAM_PASSWORD"];
+  if (!pwd) throw new Error("PLANNER_TEAM_PASSWORD não configurada no servidor");
+  return pwd;
+};
 
 type Input = { password: string };
 const validatePassword = (d: unknown): Input => {
@@ -11,12 +15,12 @@ const validatePassword = (d: unknown): Input => {
   return { password: p };
 };
 const assertPassword = (p: string) => {
-  if (p !== TEAM_PASSWORD) throw new Error("Unauthorized");
+  if (p !== getTeamPassword()) throw new Error("Unauthorized");
 };
 
 export const verifyPlannerPassword = createServerFn({ method: "POST" })
   .inputValidator(validatePassword)
-  .handler(async ({ data }) => ({ ok: data.password === TEAM_PASSWORD }));
+  .handler(async ({ data }) => ({ ok: data.password === getTeamPassword() }));
 
 export const loadPlannerState = createServerFn({ method: "POST" })
   .inputValidator(validatePassword)

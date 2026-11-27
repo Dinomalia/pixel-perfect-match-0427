@@ -147,7 +147,7 @@ function App({ onLogout }: { onLogout?: () => void }) {
         </div>
       )}
       <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
-        {view === "home" && <HomeView me={me} onEdit={openEdit} onOpenProject={(code) => { setFilters({ company: "all", project: code, phase: "all", person: "all", docType: "all", search: "" }); setView("kanban"); }} />}
+        {view === "home" && <HomeView me={me} onEdit={openEdit} />}
         {view === "kanban" && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">

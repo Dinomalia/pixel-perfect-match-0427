@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { addDays, format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertTriangle, ArrowRight, CalendarClock, ChevronLeft, ChevronRight, Clock, Copy, Inbox, ListTodo, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarClock, ChevronLeft, ChevronRight, Clock, Copy, Inbox, ListTodo, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PRIORITIES, daysUntil, getStageColor, getStatusStyle, initials, personById, revOf, STATUS_STYLE, useTasks, type Task } from "@/lib/tasks";
@@ -27,8 +26,8 @@ function Kpi({ label, value, icon: Icon, alert }: { label: string; value: number
 
 const localToday = () => format(new Date(), "yyyy-MM-dd");
 
-export function HomeView({ me, onEdit, onOpenProject }: { me: string; onEdit: (t: Task) => void; onOpenProject: (code: string) => void }) {
-  const { tasks, projects, companyOf, phaseOf, stages, timeLogs, addTimeLog, deleteTimeLog } = useTasks();
+export function HomeView({ me, onEdit }: { me: string; onEdit: (t: Task) => void }) {
+  const { tasks, companyOf, phaseOf, stages, timeLogs, addTimeLog, deleteTimeLog } = useTasks();
   const [detail, setDetail] = useState<Task | null>(null);
 
   // Time tracking form state
@@ -46,12 +45,6 @@ export function HomeView({ me, onEdit, onOpenProject }: { me: string; onEdit: (t
   const soon = open.filter((t) => { const d = daysUntil(t.dueDate); return d >= 0 && d <= 7; });
   const action = mine.filter((t) => t.status === "Elaboração" || t.status === "Retrabalho");
   const late = open.filter((t) => daysUntil(t.dueDate) < 0).length;
-
-  const myProjects = projects.filter((p) => mine.some((t) => t.projectCode === p.code)).map((p) => {
-    const all = tasks.filter((t) => t.projectCode === p.code);
-    const my = all.filter((t) => t.assignees.includes(me));
-    return { ...p, total: all.length, my: my.length, pct: Math.round((my.filter((t) => t.status === "Aprovado").length / (my.length || 1)) * 100) };
-  });
 
   const queue = [...open].sort((a, b) => PRIORITIES.indexOf(b.priority) - PRIORITIES.indexOf(a.priority) || a.dueDate.localeCompare(b.dueDate));
   const hour = new Date().getHours();
@@ -341,28 +334,6 @@ export function HomeView({ me, onEdit, onOpenProject }: { me: string; onEdit: (t
           </div>
         </section>
       </div>
-
-      <section>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Meus projetos ativos</h3>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {myProjects.map((p) => (
-            <div key={p.code} className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{companyOf(p.code)?.name}</p>
-                <p className="font-mono text-sm font-semibold text-primary">{p.code}</p>
-                <p className="font-semibold">{p.name}</p>
-              </div>
-              <div>
-                <div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Meus documentos aprovados</span><span className="font-semibold text-foreground">{p.pct}%</span></div>
-                <Progress value={p.pct} className="h-2" />
-                <p className="mt-1 text-xs text-muted-foreground">{p.my} de {p.total} documentos do projeto são seus</p>
-              </div>
-              <Button variant="outline" size="sm" className="mt-auto self-start" onClick={() => onOpenProject(p.code)}>Abrir quadro <ArrowRight className="h-4 w-4" /></Button>
-            </div>
-          ))}
-          {myProjects.length === 0 && <p className="text-sm text-muted-foreground">Nenhum projeto alocado.</p>}
-        </div>
-      </section>
 
       <TaskViewDialog task={detail} onClose={() => setDetail(null)} onEdit={onEdit} />
     </div>
