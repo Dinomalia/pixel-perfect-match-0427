@@ -4,12 +4,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PRIORITY_STYLE, STATUSES, STATUS_STYLE, daysUntil, fmtDate, initials, isNetPath, personById, useTasks, type Priority, type Status, type Task } from "@/lib/tasks";
+import { PRIORITY_STYLE, STATUS_STYLE, daysUntil, fmtDate, getStageColor, getStatusStyle, initials, isNetPath, personById, useTasks, type Priority, type Status, type Task } from "@/lib/tasks";
 
 export function StatusBadge({ status }: { status: Status }) {
+  const { stages } = useTasks();
+  const st = getStatusStyle(status, stages);
+  const customColor = !STATUS_STYLE[status] ? getStageColor(status, stages) : undefined;
   return (
-    <Badge variant="outline" className={cn("gap-1.5 font-medium", STATUS_STYLE[status].badge)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_STYLE[status].dot)} />
+    <Badge variant="outline" className={cn("gap-1.5 font-medium", st.badge)}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", !customColor && st.dot)} style={customColor ? { backgroundColor: customColor } : undefined} />
       {status}
     </Badge>
   );
@@ -40,8 +43,8 @@ export function Avatars({ ids, size = "sm" }: { ids: string[]; size?: "sm" | "md
   );
 }
 
-export async function copyPath(v: string) {
-  try { await navigator.clipboard.writeText(v); toast.success("Caminho copiado!"); } catch { toast.error("Não foi possível copiar"); }
+export async function copyPath(v: string, msg = "Caminho copiado!") {
+  try { await navigator.clipboard.writeText(v); toast.success(msg); } catch { toast.error("Não foi possível copiar"); }
 }
 
 export function FolderCopy({ path }: { path?: string | undefined }) {
@@ -68,20 +71,27 @@ export function DocTypeBadge({ type }: { type: string }) {
 }
 
 export function StatusSelect({ task }: { task: Task }) {
-  const { moveTask } = useTasks();
+  const { moveTask, stages } = useTasks();
+  const curStyle = getStatusStyle(task.status, stages);
+  const curCustom = !STATUS_STYLE[task.status] ? getStageColor(task.status, stages) : undefined;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-        <button type="button" className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition hover:opacity-80", STATUS_STYLE[task.status].badge)}>
-          <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_STYLE[task.status].dot)} />{task.status}<ChevronDown className="h-3 w-3" />
+        <button type="button" className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition hover:opacity-80", curStyle.badge)}>
+          <span className={cn("h-1.5 w-1.5 rounded-full", !curCustom && curStyle.dot)} style={curCustom ? { backgroundColor: curCustom } : undefined} />
+          {task.status}<ChevronDown className="h-3 w-3" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-        {STATUSES.map((s) => (
-          <DropdownMenuItem key={s} onSelect={() => moveTask(task.id, s)} className="gap-2">
-            <span className={cn("h-2 w-2 rounded-full", STATUS_STYLE[s].dot)} />{s}
-          </DropdownMenuItem>
-        ))}
+        {stages.map((s) => {
+          const st = getStatusStyle(s.name, stages);
+          const custom = !STATUS_STYLE[s.name] ? s.color : undefined;
+          return (
+            <DropdownMenuItem key={s.id} onSelect={(e) => { e.stopPropagation(); moveTask(task.id, s.name); }} className="gap-2">
+              <span className={cn("h-2 w-2 rounded-full", !custom && st.dot)} style={custom ? { backgroundColor: custom } : undefined} />{s.name}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

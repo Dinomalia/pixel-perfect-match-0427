@@ -4,6 +4,10 @@ import { getSessionPassword } from "@/components/planner/LoginScreen";
 export type CloudPlannerPayload = {
   tasks?: unknown[];
   projects?: unknown[];
+  parentProjects?: unknown[];
+  projectPhases?: unknown[];
+  stages?: unknown[];
+  timeLogs?: unknown[];
   companies?: unknown[];
   revTrash?: unknown[];
   people?: unknown[];

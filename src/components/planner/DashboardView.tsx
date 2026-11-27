@@ -2,7 +2,7 @@ import { ShieldAlert, AlertTriangle, CheckCircle2, Clock, FolderKanban, ListTodo
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { PEOPLE, STATUSES, STATUS_STYLE, useTasks, type Task } from "@/lib/tasks";
+import { getStageColor, useTasks, type Task } from "@/lib/tasks";
 
 function Kpi({ label, value, icon: Icon, tone }: { label: string; value: string | number; icon: typeof ListTodo; tone?: "rework" | "pending" }) {
   return (
@@ -29,42 +29,43 @@ function Panel({ title, children, className }: { title: string; children: React.
 const tip = { contentStyle: { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 } };
 const pct = (ts: Task[]) => (ts.length ? Math.round((ts.filter((t) => t.status === "Aprovado").length / ts.length) * 100) : 0);
 
-function RateRow({ label, sub, ts }: { label: string; sub?: string | undefined; ts: Task[] }) {
+function RateRow({ label, sub, ts, stageNames }: { label: string; sub?: string | undefined; ts: Task[]; stageNames: string[] }) {
   const p = pct(ts);
   return (
     <tr className="border-b border-border last:border-0">
       <td className="py-3 pr-4"><p className="font-medium">{label}</p>{sub && <p className="font-mono text-xs text-primary">{sub}</p>}</td>
-      {STATUSES.map((s) => <td key={s} className="py-3 pr-3 text-center">{ts.filter((t) => t.status === s).length}</td>)}
+      {stageNames.map((s) => <td key={s} className="py-3 pr-3 text-center">{ts.filter((t) => t.status === s).length}</td>)}
       <td className="py-3 pr-4 text-center font-semibold">{ts.length}</td>
       <td className="py-3"><div className="flex items-center gap-2"><Progress value={p} className="h-2" /><span className="w-10 text-right text-xs font-semibold">{p}%</span></div></td>
     </tr>
   );
 }
 
-function RateTable({ rows }: { rows: { key: string; label: string; sub?: string | undefined; ts: Task[] }[] }) {
+function RateTable({ rows, stageNames }: { rows: { key: string; label: string; sub?: string | undefined; ts: Task[] }[]; stageNames: string[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="text-left text-xs uppercase text-muted-foreground">
           <tr className="border-b border-border">
             <th className="py-2 pr-4">Nome</th>
-            {STATUSES.map((s) => <th key={s} className="py-2 pr-3 text-center">{s}</th>)}
+            {stageNames.map((s) => <th key={s} className="py-2 pr-3 text-center">{s}</th>)}
             <th className="py-2 pr-4 text-center">Total</th><th className="min-w-[160px] py-2">Aprovação</th>
           </tr>
         </thead>
-        <tbody>{rows.map((r) => <RateRow key={r.key} label={r.label} sub={r.sub} ts={r.ts} />)}</tbody>
+        <tbody>{rows.map((r) => <RateRow key={r.key} label={r.label} sub={r.sub} ts={r.ts} stageNames={stageNames} />)}</tbody>
       </table>
     </div>
   );
 }
 
 export function DashboardView() {
-  const { filtered, people, projects, companies, docTypes, companyOf } = useTasks();
+  const { filtered, people, projects, companies, docTypes, stages, companyOf } = useTasks();
+  const stageNames = stages.map((s) => s.name);
   const activeProjects = new Set(filtered.map((t) => t.projectCode)).size;
   const count = (s: string) => filtered.filter((t) => t.status === s).length;
 
   const qr = filtered.filter((t) => t.qualityRework);
-  const byStatus = [...STATUSES.map((s) => ({ name: s, value: count(s), fill: STATUS_STYLE[s].chart })), { name: "Retrabalho Qualidade", value: qr.length, fill: "var(--destructive)" }];
+  const byStatus = [...stages.map((s) => ({ name: s.name, value: count(s.name), fill: s.color })), { name: "Retrabalho Qualidade", value: qr.length, fill: "var(--destructive)" }];
   const seg = (keyOf: (t: Task) => string) => {
     const m = new Map<string, number>();
     qr.forEach((t) => { const k = keyOf(t); m.set(k, (m.get(k) ?? 0) + 1); });
@@ -84,7 +85,7 @@ export function DashboardView() {
   const byType = docTypes.map((d) => {
     const ts = filtered.filter((t) => t.docType === d);
     const row: Record<string, string | number> = { name: d, total: ts.length };
-    STATUSES.forEach((s) => (row[s] = ts.filter((t) => t.status === s).length));
+    stageNames.forEach((s) => (row[s] = ts.filter((t) => t.status === s).length));
     row["Retrabalho Qualidade"] = ts.filter((t) => t.qualityRework).length;
     return row;
   }).filter((r) => (r["total"] as number) > 0);
@@ -120,7 +121,7 @@ export function DashboardView() {
               <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
               <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
               <Tooltip {...tip} cursor={{ fill: "var(--muted)" }} />
-              {STATUSES.map((s) => <Bar key={s} dataKey={s} stackId="a" fill={STATUS_STYLE[s].chart} />)}
+              {stages.map((s) => <Bar key={s.id} dataKey={s.name} stackId="a" fill={getStageColor(s.name, stages)} />)}
               <Bar dataKey="Retrabalho Qualidade" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -165,8 +166,8 @@ export function DashboardView() {
         </div>
       </Panel>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Panel title="Aprovação por empresa"><RateTable rows={companyRows} /></Panel>
-        <Panel title="Aprovação por projeto"><RateTable rows={projectRows} /></Panel>
+        <Panel title="Aprovação por empresa"><RateTable rows={companyRows} stageNames={stageNames} /></Panel>
+        <Panel title="Aprovação por projeto"><RateTable rows={projectRows} stageNames={stageNames} /></Panel>
       </div>
     </div>
   );

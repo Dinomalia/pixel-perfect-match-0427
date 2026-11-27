@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 
 const STATE_ID = "default";
-// Shared team password, checked only on the server.
-const TEAM_PASSWORD = "galhofraco";
+// Shared team password, checked only on the server (prefers env var when set).
+const TEAM_PASSWORD = process.env["PLANNER_TEAM_PASSWORD"] || "galhofraco";
 
 type Input = { password: string };
 const validatePassword = (d: unknown): Input => {

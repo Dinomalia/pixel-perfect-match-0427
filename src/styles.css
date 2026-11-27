@@ -197,5 +197,18 @@
 }
 
 /* Keep layout width stable when menus/selects lock page scroll */
-html { scrollbar-gutter: stable; }
-body[data-scroll-locked] { margin-right: 0 !important; padding-right: 0 !important; overflow: visible !important; }
+html,
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  overflow: visible !important;
+}

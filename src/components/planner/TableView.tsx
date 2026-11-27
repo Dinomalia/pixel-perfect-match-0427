@@ -2,25 +2,26 @@ import { useMemo, useState } from "react";
 import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { STATUSES, fmtDate, personById, useTasks, type Task } from "@/lib/tasks";
+import { fmtDate, personById, useTasks, type Task } from "@/lib/tasks";
 import { Avatars, DocTypeBadge, GedeLink, PriorityBadge, StatusBadge } from "./Shared";
 
 type Key = "projectCode" | "project" | "person" | "dueDate" | "status" | "title";
 const PAGE = 8;
 
 export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
-  const { filtered, projects, companyOf } = useTasks();
+  const { filtered, projects, stages, companyOf } = useTasks();
   const [status, setStatus] = useState("all");
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: "dueDate", dir: 1 });
   const [page, setPage] = useState(0);
 
   const rows = useMemo(() => {
     const pname = (c: string) => projects.find((p) => p.code === c)?.name ?? "";
+    const stageNames = stages.map((s) => s.name);
     const val = (t: Task): string => {
       switch (sort.key) {
         case "project": return pname(t.projectCode);
         case "person": return personById(t.assignees[0] ?? "")?.name ?? "";
-        case "status": return String(STATUSES.indexOf(t.status));
+        case "status": return String(stageNames.indexOf(t.status));
         default: return t[sort.key];
       }
     };
@@ -46,7 +47,7 @@ export function TableView({ onEdit }: { onEdit: (t: Task) => void }) {
         <span className="text-sm font-medium text-muted-foreground">Status:</span>
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(0); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Todos</SelectItem>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          <SelectContent><SelectItem value="all">Todos</SelectItem>{stages.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
         </Select>
         <span className="ml-auto text-sm text-muted-foreground">{rows.length} documentos</span>
       </div>
