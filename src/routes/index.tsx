@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart3, CalendarDays, FileSpreadsheet, FolderKanban, Home, Trash2, ShieldAlert, ChevronRight, RotateCcw, SlidersHorizontal, Upload, UserPlus, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
+import { BarChart3, CalendarDays, FileSpreadsheet, Home, Trash2, ShieldAlert, ChevronRight, RotateCcw, SlidersHorizontal, Upload, UserPlus, KanbanSquare, LayoutList, LogOut, Plus, Search } from "lucide-react";
 import { TimelineView } from "@/components/planner/Timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { KanbanView, type GroupBy } from "@/components/planner/KanbanView";
 import { HomeView } from "@/components/planner/HomeView";
 import { DashboardView } from "@/components/planner/DashboardView";
-import { ProjectsView } from "@/components/planner/ProjectsView";
 import { TableView } from "@/components/planner/TableView";
 import { TaskDialog } from "@/components/planner/TaskDialog";
 import { StageManagerDialog } from "@/components/planner/StageManagerDialog";
@@ -50,7 +49,7 @@ export const Route = createFileRoute("/")({
   component: IndexPage,
 });
 
-type View = "home" | "kanban" | "projects" | "dashboard" | "table" | "timeline" | "trash";
+type View = "home" | "kanban" | "dashboard" | "table" | "timeline" | "trash";
 
 function App({ onLogout }: { onLogout?: () => void }) {
   const { filtered, people, filters, setFilters, projects, parentProjects, projectPhases, companies, trash, companyOf } = useTasks();
@@ -89,7 +88,6 @@ function App({ onLogout }: { onLogout?: () => void }) {
             <TabsList className="w-full flex-wrap bg-navy-foreground/10 sm:w-auto">
               <TabsTrigger value="home" className="nav-tab"><Home className="mr-1.5 h-4 w-4" />Meu Painel</TabsTrigger>
               <TabsTrigger value="kanban" className="nav-tab"><KanbanSquare className="mr-1.5 h-4 w-4" />Kanban</TabsTrigger>
-              <TabsTrigger value="projects" className="nav-tab"><FolderKanban className="mr-1.5 h-4 w-4" />Projetos</TabsTrigger>
               <TabsTrigger value="dashboard" className="nav-tab"><BarChart3 className="mr-1.5 h-4 w-4" />Dashboard</TabsTrigger>
               <TabsTrigger value="table" className="nav-tab"><LayoutList className="mr-1.5 h-4 w-4" />Tabela</TabsTrigger>
               <TabsTrigger value="timeline" className="nav-tab"><CalendarDays className="mr-1.5 h-4 w-4" />Cronograma</TabsTrigger>
@@ -111,7 +109,7 @@ function App({ onLogout }: { onLogout?: () => void }) {
           )}
         </div>
       </header>
-      {view !== "home" && view !== "trash" && view !== "projects" && (
+      {view !== "home" && view !== "trash" && (
         <div className="border-b border-border bg-card">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
             <nav aria-label="Escopo" className="flex flex-wrap items-center gap-1.5">
@@ -178,15 +176,6 @@ function App({ onLogout }: { onLogout?: () => void }) {
             </div>
             <KanbanView groupBy={groupBy} onEdit={openEdit} onNew={openNew} />
           </div>
-        )}
-        {view === "projects" && (
-          <ProjectsView
-            onEditTask={openEdit}
-            onOpenProject={(code, phaseId) => {
-              setFilters({ company: "all", project: code, phase: phaseId ?? "all", person: "all", docType: "all", search: "" });
-              setView("kanban");
-            }}
-          />
         )}
         {view === "dashboard" && <DashboardView />}
         {view === "table" && <TableView onEdit={openEdit} />}

@@ -78,9 +78,8 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
 
     let phaseId = form.phaseId && form.phaseId !== NONE ? form.phaseId : undefined;
     if (form.phaseId === NEW) {
-      const pn = newPhaseName.trim();
-      if (!pn) { toast.error("Informe o nome da nova fase"); return; }
       const pp = parentProjects.find((x) => x.code === code);
+      const pn = newPhaseName.trim() || `Fase ${availablePhases.length + 1}`;
       if (pp) phaseId = addPhase(pp.id, pn).id;
     } else if (renamingPhase && phaseId && editingPhaseName.trim()) {
       renamePhase(phaseId, editingPhaseName.trim());
@@ -141,7 +140,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
           )}
           <div className="sm:col-span-2 space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label>Fase / Parte do Projeto</Label>
+              <Label>Fase / Parte do Projeto (opcional)</Label>
               {form.phaseId && form.phaseId !== NEW && form.phaseId !== NONE && (
                 <button
                   type="button"
@@ -165,7 +164,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus }: { open: 
               </SelectContent>
             </Select>
             {form.phaseId === NEW && (
-              <Input placeholder="Nome da nova fase (ex: Projeto Detalhado)" value={newPhaseName} onChange={(e) => setNewPhaseName(e.target.value)} maxLength={80} />
+              <Input placeholder="Nome da nova fase (opcional, ex: Projeto Detalhado)" value={newPhaseName} onChange={(e) => setNewPhaseName(e.target.value)} maxLength={80} />
             )}
             {renamingPhase && form.phaseId && form.phaseId !== NEW && (
               <Input placeholder="Novo nome da fase" value={editingPhaseName} onChange={(e) => setEditingPhaseName(e.target.value)} maxLength={80} />
